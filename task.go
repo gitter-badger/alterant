@@ -22,7 +22,7 @@ func performTasks(machine string, cfg *config) error {
 		log.Printf("Performing task: %s", task)
 
 		// export environment variables specific to the specified machine
-		m.prepareEnvironment()
+		m.prepareEnvironment(machine)
 
 		// create the links specified in the task
 		err := t.createLinks(cfg.cwd)
