@@ -72,7 +72,7 @@ func (t *task) createLinks(cwd string) error {
 			return err
 		}
 
-		err = os.Symlink(source, destination)
+		err = os.Symlink(os.ExpandEnv(source), os.ExpandEnv(destination))
 		if err != nil {
 			return err
 		}
