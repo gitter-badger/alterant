@@ -8,28 +8,32 @@ import (
 	"github.com/codegangsta/cli"
 )
 
-func main() {
-	// require that the config is name 'alter.yaml'
+func requireConfig() (*config, error) {
+	// require that the config is named 'alter.yaml'
 	file := "alter.yaml"
 
 	cwd, err := os.Getwd()
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	// require that alter.yaml exists in the cwd
 	if _, err := os.Stat(path.Join(cwd, file)); os.IsNotExist(err) {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	cfg, err := loadConfig(file)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	cfg.path = path.Join(cwd, file)
 	cfg.cwd = path.Dir(cfg.path)
 
+	return cfg, nil
+}
+
+func main() {
 	app := cli.NewApp()
 
 	app.Usage = "Alter your machine with ease."
@@ -56,6 +60,11 @@ func main() {
 				cmd := app.Command("decrypt")
 				cmd.Run(c)
 
+				cfg, err := requireConfig()
+				if err != nil {
+					log.Fatal(err)
+				}
+
 				machine := c.Args()[0]
 
 				err = performTasks(machine, cfg)
@@ -74,6 +83,11 @@ func main() {
 					os.Exit(1)
 				}
 
+				cfg, err := requireConfig()
+				if err != nil {
+					log.Fatal(err)
+				}
+
 				err = encryptFiles(cfg.Encrypted, c.GlobalString("password"))
 				if err != nil {
 					log.Fatal(err)
@@ -88,6 +102,11 @@ func main() {
 				if len(c.Args()) > 0 {
 					cli.ShowCommandHelp(c, "decrypt")
 					os.Exit(1)
+				}
+
+				cfg, err := requireConfig()
+				if err != nil {
+					log.Fatal(err)
 				}
 
 				if len(cfg.Encrypted) > 0 {
