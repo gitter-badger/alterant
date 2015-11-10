@@ -152,7 +152,7 @@ func main() {
 					log.Fatal(err)
 				}
 
-				err = provisionMachine(tasks, cfg, flags)
+				err = provisionMachine(cfg.machines[machine], tasks, cfg, flags)
 				if err != nil {
 					log.Fatal(err)
 				}

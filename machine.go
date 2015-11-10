@@ -13,11 +13,14 @@ type machine struct {
 	name        string
 }
 
-func provisionMachine(tasks []*task, cfg *config, flags *provisionFlags) error {
+func provisionMachine(m *machine, tasks []*task, cfg *config, flags *provisionFlags) error {
+	log.Printf("Provisioning: %s", m.name)
+
 	for _, task := range tasks {
 		log.Printf("Performing task: %s", task.name)
+
 		// export environment variables specific to the specified machine
-		// prepareEnvironment(m)
+		prepareEnvironment(m)
 
 		if flags.links {
 			// create the links specified in the task

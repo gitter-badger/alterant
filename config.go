@@ -11,6 +11,8 @@ import (
 type config struct {
 	actions   map[string]*ordered.OrderedMap
 	encrypted []string
+	machines  map[string]*machine
+	tasks     map[string]*task
 }
 
 func newConfig() *config {

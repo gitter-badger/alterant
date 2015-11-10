@@ -40,9 +40,12 @@ func (c *config) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 
+	c.machines = aux.Machines
+	c.tasks = aux.Tasks
 	// match the machine's requested tasks to the tasks defined in the config
 	c.actions = map[string]*ordered.OrderedMap{}
 	for machineName, machinePtr := range aux.Machines {
+		machinePtr.name = machineName
 		c.actions[machineName] = ordered.NewOrderedMap()
 		size := machinePtr.Tasks.Size()
 		var slice = make([]*task, size)
@@ -54,6 +57,8 @@ func (c *config) UnmarshalYAML(unmarshal func(interface{}) error) error {
 				}
 
 				taskPtr.name = taskName
+				taskPtr.machine = machinePtr
+
 				slice[index] = taskPtr
 			}
 		}
