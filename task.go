@@ -11,7 +11,7 @@ type task struct {
 	Commands    []string          `yaml:"commands"`
 }
 
-func performTasks(machine string, cfg *config) error {
+func provisionMachine(machine string, cfg *config, flags *provisionFlags) error {
 	m := cfg.Machines[machine]
 	for _, task := range m.Tasks {
 		t, ok := cfg.Tasks[task]
@@ -24,16 +24,20 @@ func performTasks(machine string, cfg *config) error {
 		// export environment variables specific to the specified machine
 		m.prepareEnvironment(machine)
 
-		// create the links specified in the task
-		err := t.createLinks(cfg.cwd)
-		if err != nil {
-			return err
+		if flags.links {
+			// create the links specified in the task
+			err := t.createLinks(cfg.cwd, flags)
+			if err != nil {
+				return err
+			}
 		}
 
-		// execute the commands specified in the task
-		err = t.executeCommands(cfg)
-		if err != nil {
-			return err
+		if flags.commands {
+			// execute the commands specified in the task
+			err := t.executeCommands(cfg)
+			if err != nil {
+				return err
+			}
 		}
 	}
 

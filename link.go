@@ -57,22 +57,26 @@ func createPath(destination string) error {
 	return nil
 }
 
-func (t *task) createLinks(cwd string) error {
+func (t *task) createLinks(cwd string, flags *provisionFlags) error {
 	for original, link := range t.Links {
 		source := path.Join(cwd, original)
 		destination := path.Join(os.ExpandEnv(t.Destination), link)
 
-		err := createPath(destination)
-		if err != nil {
-			return err
+		if flags.parents {
+			err := createPath(destination)
+			if err != nil {
+				return err
+			}
 		}
 
-		err = cleanPath(destination)
-		if err != nil {
-			return err
+		if flags.clobber {
+			err := cleanPath(destination)
+			if err != nil {
+				return err
+			}
 		}
 
-		err = os.Symlink(os.ExpandEnv(source), os.ExpandEnv(destination))
+		err := os.Symlink(os.ExpandEnv(source), os.ExpandEnv(destination))
 		if err != nil {
 			return err
 		}

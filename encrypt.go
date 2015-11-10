@@ -125,7 +125,7 @@ func getMaskedInput() ([]byte, error) {
 	return key, nil
 }
 
-func keyFromPassword(password []byte) string {
+func key32BitFromPassword(password []byte) string {
 	hasher := md5.New()
 
 	hasher.Write([]byte(password))
@@ -137,7 +137,7 @@ func hashPassword(password string) (string, error) {
 	var key string
 
 	if password != "" {
-		key = keyFromPassword([]byte(password))
+		key = key32BitFromPassword([]byte(password))
 	} else {
 		fmt.Println("Enter your password:")
 
@@ -146,14 +146,14 @@ func hashPassword(password string) (string, error) {
 			return "", err
 		}
 
-		key = keyFromPassword(k)
+		key = key32BitFromPassword(k)
 	}
 
 	return key, nil
 }
 
-func decryptFiles(files []string, password string) error {
-	key, err := hashPassword(password)
+func decryptFiles(files []string, flags *decryptFlags) error {
+	key, err := hashPassword(flags.global.password)
 	if err != nil {
 		return err
 	}
@@ -170,13 +170,20 @@ func decryptFiles(files []string, password string) error {
 		if err != nil {
 			return err
 		}
+
+		if flags.remove {
+			err = os.Remove(file)
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	return nil
 }
 
-func encryptFiles(files []string, password string) error {
-	key, err := hashPassword(password)
+func encryptFiles(files []string, flags *encryptFlags) error {
+	key, err := hashPassword(flags.global.password)
 	if err != nil {
 		return err
 	}
@@ -193,9 +200,11 @@ func encryptFiles(files []string, password string) error {
 			return err
 		}
 
-		err = os.Remove(file)
-		if err != nil {
-			return err
+		if flags.remove {
+			err = os.Remove(file)
+			if err != nil {
+				return err
+			}
 		}
 	}
 

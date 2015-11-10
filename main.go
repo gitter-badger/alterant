@@ -8,6 +8,28 @@ import (
 	"github.com/codegangsta/cli"
 )
 
+type globalFlags struct {
+	password string
+}
+
+type provisionFlags struct {
+	global   *globalFlags
+	links    bool
+	commands bool
+	parents  bool
+	clobber  bool
+}
+
+type encryptFlags struct {
+	global *globalFlags
+	remove bool
+}
+
+type decryptFlags struct {
+	global *globalFlags
+	remove bool
+}
+
 func requireConfig() (*config, error) {
 	// require that the config is named 'alter.yaml'
 	file := "alter.yaml"
@@ -34,6 +56,8 @@ func requireConfig() (*config, error) {
 }
 
 func main() {
+	global := &globalFlags{}
+
 	app := cli.NewApp()
 
 	app.Usage = "Alter your machine with ease."
@@ -43,7 +67,7 @@ func main() {
 		cli.StringFlag{
 			Name:  "password",
 			Value: "",
-			Usage: "a password to encrypt/decrypt a file",
+			Usage: "password to encrypt/decrypt a file",
 		},
 	}
 	app.Commands = []cli.Command{
@@ -51,11 +75,37 @@ func main() {
 			Name:    "provision",
 			Aliases: []string{"p"},
 			Usage:   "provision a machine",
+			Flags: []cli.Flag{
+				cli.BoolTFlag{
+					Name:  "links",
+					Usage: "provision links, defaults to true",
+				},
+				cli.BoolTFlag{
+					Name:  "commands",
+					Usage: "provision commands, defaults to true",
+				},
+				cli.BoolFlag{
+					Name:  "parents",
+					Usage: "make parent directories as needed, defaults to false",
+				},
+				cli.BoolFlag{
+					Name:  "clobber",
+					Usage: "remove existing files/directories before linking, defaults to false",
+				},
+			},
 			Action: func(c *cli.Context) {
 				if len(c.Args()) != 1 {
 					cli.ShowCommandHelp(c, "provision")
 					os.Exit(1)
 				}
+
+				global.password = c.GlobalString("password")
+
+				flags := &provisionFlags{global: global}
+				flags.links = c.BoolT("links")
+				flags.commands = c.BoolT("commands")
+				flags.parents = c.BoolT("parents")
+				flags.clobber = c.BoolT("clobber")
 
 				cmd := app.Command("decrypt")
 				cmd.Run(c)
@@ -67,7 +117,7 @@ func main() {
 
 				machine := c.Args()[0]
 
-				err = performTasks(machine, cfg)
+				err = provisionMachine(machine, cfg, flags)
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -77,18 +127,29 @@ func main() {
 			Name:    "encrypt",
 			Aliases: []string{"e"},
 			Usage:   "encrypt files",
+			Flags: []cli.Flag{
+				cli.BoolFlag{
+					Name:  "remove",
+					Usage: "remove original files, defaults to false",
+				},
+			},
 			Action: func(c *cli.Context) {
 				if len(c.Args()) > 0 {
 					cli.ShowCommandHelp(c, "encrypt")
 					os.Exit(1)
 				}
 
+				global.password = c.GlobalString("password")
+
+				flags := &encryptFlags{global: global}
+				flags.remove = c.BoolT("remove")
+
 				cfg, err := requireConfig()
 				if err != nil {
 					log.Fatal(err)
 				}
 
-				err = encryptFiles(cfg.Encrypted, c.GlobalString("password"))
+				err = encryptFiles(cfg.Encrypted, flags)
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -98,11 +159,22 @@ func main() {
 			Name:    "decrypt",
 			Aliases: []string{"d"},
 			Usage:   "decrypt files",
+			Flags: []cli.Flag{
+				cli.BoolFlag{
+					Name:  "remove",
+					Usage: "remove encrypted files, defaults to false",
+				},
+			},
 			Action: func(c *cli.Context) {
 				if len(c.Args()) > 0 {
 					cli.ShowCommandHelp(c, "decrypt")
 					os.Exit(1)
 				}
+
+				global.password = c.GlobalString("password")
+
+				flags := &decryptFlags{global: global}
+				flags.remove = c.BoolT("remove")
 
 				cfg, err := requireConfig()
 				if err != nil {
@@ -110,7 +182,7 @@ func main() {
 				}
 
 				if len(cfg.Encrypted) > 0 {
-					err = decryptFiles(cfg.Encrypted, c.GlobalString("password"))
+					err = decryptFiles(cfg.Encrypted, flags)
 					if err != nil {
 						log.Fatal(err)
 					}
