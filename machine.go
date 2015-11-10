@@ -1,10 +1,14 @@
 package main
 
-import "log"
+import (
+	"log"
+
+	"github.com/andrewrynhard/go-ordered-map"
+)
 
 type machine struct {
 	Environment map[string]string
-	Tasks       map[string]*task
+	Tasks       *ordered.OrderedMap
 	order       []string
 	name        string
 }

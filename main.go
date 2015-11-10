@@ -70,7 +70,9 @@ func parseArgs(machine string, tasks []string, cfg *config) ([]*task, error) {
 
 		targetTasks = append(targetTasks, val.(*task))
 		for {
+
 			key, val := next()
+
 			if key == nil {
 				break
 			}

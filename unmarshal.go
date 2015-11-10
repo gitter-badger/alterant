@@ -1,8 +1,11 @@
 package main
 
 import (
+	"errors"
 	"os"
 	"path"
+
+	"github.com/andrewrynhard/go-ordered-map"
 )
 
 func (m *machine) UnmarshalYAML(unmarshal func(interface{}) error) error {
@@ -17,10 +20,10 @@ func (m *machine) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 	m.Environment = aux.Environment
 
-	m.Tasks = map[string]*task{}
+	m.Tasks = ordered.NewOrderedMap()
 	for _, taskName := range aux.Tasks {
 		// temporary pointer to task type
-		m.Tasks[taskName] = &task{}
+		m.Tasks.Add(taskName, &task{})
 	}
 
 	return nil
@@ -38,14 +41,26 @@ func (c *config) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	}
 
 	// match the machine's requested tasks to the tasks defined in the config
-	c.actions = map[string]*OrderedMap{}
+	c.actions = map[string]*ordered.OrderedMap{}
 	for machineName, machinePtr := range aux.Machines {
-		c.actions[machineName] = NewOrderedMap()
+		c.actions[machineName] = ordered.NewOrderedMap()
+		size := machinePtr.Tasks.Size()
+		var slice = make([]*task, size)
 		for taskName, taskPtr := range aux.Tasks {
-			_, ok := machinePtr.Tasks[taskName]
-			if ok {
+			if machinePtr.Tasks.Contains(taskName) {
+				index, err := machinePtr.Tasks.IndexOf(taskName)
+				if err != nil {
+					return errors.New("ERROR")
+				}
+
 				taskPtr.name = taskName
-				c.actions[machineName].Add(taskName, taskPtr)
+				slice[index] = taskPtr
+			}
+		}
+
+		for _, task := range slice {
+			if task != nil {
+				c.actions[machineName].Add(task.name, task)
 			}
 		}
 	}

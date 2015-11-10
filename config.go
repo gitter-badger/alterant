@@ -3,11 +3,13 @@ package main
 import (
 	"io/ioutil"
 
+	"github.com/andrewrynhard/go-ordered-map"
+
 	"gopkg.in/yaml.v2"
 )
 
 type config struct {
-	actions   map[string]*OrderedMap
+	actions   map[string]*ordered.OrderedMap
 	encrypted []string
 }
 
