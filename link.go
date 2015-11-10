@@ -1,28 +1,57 @@
 package main
 
 import (
+	"errors"
 	"log"
 	"os"
 	"path"
 )
 
-func removeLink(link string) error {
-	stat, err := os.Lstat(link)
-	if os.IsNotExist(err) || stat.Mode()&os.ModeSymlink == 0 {
-		return nil
+type linkTarget struct {
+	Value string
+}
+
+type linkDestination struct {
+	Value string
+}
+
+// TODO: clean this up
+func (l *linkDestination) isSymlink() (bool, error) {
+	stat, err := os.Lstat(l.Value)
+	if os.IsNotExist(err) {
+		return false, err
 	}
 
-	if err := os.Remove(link); err != nil {
+	if stat.Mode()&os.ModeSymlink == 0 {
+		return false, nil
+	}
+
+	return true, nil
+}
+
+// TODO: clean this up
+func (l *linkDestination) removeLink() error {
+	ok, err := l.isSymlink()
+
+	if err != nil {
 		return err
 	}
 
-	log.Printf("Symlink removed: %s", link)
+	if !ok {
+		return errors.New("File is not a symlink")
+	}
+
+	if err := os.Remove(l.Value); err != nil {
+		return err
+	}
+
+	log.Printf("Symlink removed: %s", l.Value)
 
 	return nil
 }
 
-func cleanPath(link string) error {
-	stat, err := os.Lstat(link)
+func (l *linkDestination) clobberPath() error {
+	stat, err := os.Lstat(l.Value)
 	if os.IsNotExist(err) {
 		// we return here because there is no file to clean
 		return nil
@@ -30,12 +59,12 @@ func cleanPath(link string) error {
 
 	// remove the file/dir if it is not a symlink
 	if stat.Mode()&os.ModeSymlink == 0 {
-		err := os.RemoveAll(link)
+		err := os.RemoveAll(l.Value)
 		if err != nil {
 			return err
 		}
 	} else {
-		err := removeLink(link)
+		err := l.removeLink()
 		if err != nil {
 			return err
 		}
@@ -44,8 +73,8 @@ func cleanPath(link string) error {
 	return nil
 }
 
-func createPath(destination string) error {
-	parentDir := path.Dir(destination)
+func createParents(link string) error {
+	parentDir := path.Dir(link)
 
 	if _, err := os.Stat(parentDir); os.IsNotExist(err) {
 		log.Printf("Creating path: %s", parentDir)
@@ -57,31 +86,29 @@ func createPath(destination string) error {
 	return nil
 }
 
-func (t *task) createLinks(cwd string, flags *provisionFlags) error {
-	for original, link := range t.Links {
-		source := path.Join(cwd, original)
-		destination := path.Join(os.ExpandEnv(t.Destination), link)
+func (t *task) createLinks(flags *provisionFlags) error {
+	for target, dest := range t.Links {
 
 		if flags.parents {
-			err := createPath(destination)
+			err := createParents(dest.Value)
 			if err != nil {
 				return err
 			}
 		}
 
 		if flags.clobber {
-			err := cleanPath(destination)
+			err := dest.clobberPath()
 			if err != nil {
 				return err
 			}
 		}
 
-		err := os.Symlink(os.ExpandEnv(source), os.ExpandEnv(destination))
+		err := os.Symlink(target.Value, dest.Value)
 		if err != nil {
 			return err
 		}
 
-		log.Printf("Symlink created: %s", destination)
+		log.Printf("Symlink created: %s", dest.Value)
 	}
 
 	return nil

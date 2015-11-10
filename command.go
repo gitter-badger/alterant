@@ -12,7 +12,6 @@ func (t *task) executeCommands(cfg *config) error {
 		cmdArgs := []string{"-c", taskCmd}
 		cmd := exec.Command(cmdName, cmdArgs...)
 
-		cmd.Dir = cfg.cwd
 		cmd.Stderr = os.Stderr
 		cmd.Stdout = os.Stdout
 		cmd.Stdin = os.Stdin

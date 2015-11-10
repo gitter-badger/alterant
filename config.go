@@ -7,11 +7,8 @@ import (
 )
 
 type config struct {
-	Machines  map[string]machine `yaml:"machines"`
-	Tasks     map[string]task    `yaml:"tasks"`
-	Encrypted []string           `yaml:"encrypted"`
-	path      string
-	cwd       string
+	actions   map[string]*OrderedMap
+	encrypted []string
 }
 
 func newConfig() *config {
