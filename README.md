@@ -44,7 +44,7 @@ Notice that link targets can contain environment variables. The same is true for
 Lightweight scripting can be achieved via YAML's literal block feature. This makes commands that require preparation and/or cleaning up easier and ensures that the same environment is available throughout the execution.
 
 ### Encyption
-It is important to note that in order to encrypt the items listed in the `encrypted` section Alterant's `encrypt` command must be invoked. In preparation for adding encrypting items to a repository invoke the `prepare` command to remove the unencrypted versions of items listed in the `encrypted` section.
+It is important to note that in order to encrypt the items listed in the `encrypted` section Alterant's `encrypt` command must be invoked. In preparation for adding encrypted items to a repository invoke the `encrypt` command with the `--remove` flag to remove the unencrypted versions of items listed in the `encrypted` section.
 
 ### Tasks and Requests
 Tasks can be defined and are available to any machine. To consume a task a request must be indicated in the `requests` section of a machine. If one tasks depends on another we can ensure the dependency is executed first by indicating it before the target task in the `requests` section. In other words, `tasks` are executed in the order they are listed in `requests`.
