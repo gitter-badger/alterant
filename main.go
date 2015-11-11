@@ -117,14 +117,8 @@ func main() {
 			Name:    "clean",
 			Aliases: []string{"c"},
 			Usage:   "clean provisioned links",
-			Flags: []cli.Flag{
-				cli.BoolFlag{
-					Name:  "remove",
-					Usage: "remove encrypted files, defaults to false",
-				},
-			},
 			Action: func(c *cli.Context) {
-				if len(c.Args()) < 1 {
+				if len(c.Args()) == 0 {
 					cli.ShowCommandHelp(c, "clean")
 					os.Exit(1)
 				}
