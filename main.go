@@ -146,8 +146,8 @@ func main() {
 				flags.parents = c.BoolT("parents")
 				flags.clobber = c.BoolT("clobber")
 
-				// cmd := app.Command("decrypt")
-				// cmd.Run(c)
+				cmd := app.Command("decrypt")
+				cmd.Run(c)
 
 				cfg, err := requireConfig()
 				if err != nil {
