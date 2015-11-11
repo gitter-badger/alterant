@@ -1,20 +1,11 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
 
-	"github.com/andrewrynhard/go-ordered-map"
 	"github.com/codegangsta/cli"
 )
-
-type alterant struct {
-	cfg         *config
-	actions     map[string]*ordered.OrderedMap
-	machineName string
-	machinePtr  *machine
-}
 
 type globalFlags struct {
 	password string
@@ -38,56 +29,9 @@ type decryptFlags struct {
 	remove bool
 }
 
-// match the machine's requested tasks to the tasks defined in the config
-func (a *alterant) matchMachineRequests(c *config) {
-	a.actions = map[string]*ordered.OrderedMap{}
-	for mn, mp := range c.Machines {
-		a.actions[mn] = ordered.NewOrderedMap()
-		// insert tasks based on the order of the requested tasks
-		for _, mt := range mp.Requests {
-			// search the defined tasks for the requested task
-			for tn, tp := range c.Tasks {
-				if mt == tn {
-					a.actions[mn].Add(tn, tp)
-				}
-			}
-		}
-	}
-}
-
-func parseArgs(machineName string, requestedTasks []string, a *alterant) ([]*task, error) {
-	var matchedTasks []*task
-
-	// tasks requested in the args need to be validated first
-	if len(requestedTasks) != 0 {
-		for _, t := range requestedTasks {
-			if !a.actions[machineName].Contains(t) {
-				return nil, fmt.Errorf("The requested task %s is not specified for %s in alter.yaml", t, machineName)
-			}
-
-			matchedTasks = append(matchedTasks, a.actions[machineName].Value(t).(*task))
-		}
-
-	} else {
-		_, val, next := a.actions[machineName].NewIter()
-
-		matchedTasks = append(matchedTasks, val.(*task))
-		for {
-
-			key, val := next()
-
-			if key == nil {
-				break
-			}
-
-			matchedTasks = append(matchedTasks, val.(*task))
-		}
-	}
-
-	return matchedTasks, nil
-}
-
 func main() {
+	var ignoreArgCheck bool
+
 	global := &globalFlags{}
 
 	app := cli.NewApp()
@@ -131,12 +75,14 @@ func main() {
 					os.Exit(1)
 				}
 
-				machineName := c.Args().First()
-				requestedTasks := c.Args().Tail()
+				ignoreArgCheck = true
+
+				argMachine := c.Args().First()
+				argTasks := c.Args().Tail()
 
 				// export the machine name to the environment
-				log.Printf("Exporting MACHINE: %s\n", machineName)
-				os.Setenv("MACHINE", machineName)
+				log.Printf("Exporting MACHINE: %s\n", argMachine)
+				os.Setenv("MACHINE", argMachine)
 
 				global.password = c.GlobalString("password")
 
@@ -154,20 +100,12 @@ func main() {
 					log.Fatal(err)
 				}
 
-				a := &alterant{
-					cfg:         cfg,
-					machineName: machineName,
-					machinePtr:  cfg.Machines[machineName],
-				}
-
-				a.matchMachineRequests(cfg)
-
-				matchedTasks, err := parseArgs(machineName, requestedTasks, a)
+				err = cfg.filterTasks(argMachine, argTasks)
 				if err != nil {
 					log.Fatal(err)
 				}
 
-				err = provisionMachine(matchedTasks, a, flags)
+				err = provisionMachine(argMachine, cfg, flags)
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -216,9 +154,11 @@ func main() {
 				},
 			},
 			Action: func(c *cli.Context) {
-				if len(c.Args()) > 0 {
-					cli.ShowCommandHelp(c, "decrypt")
-					os.Exit(1)
+				if !ignoreArgCheck {
+					if len(c.Args()) > 0 {
+						cli.ShowCommandHelp(c, "decrypt")
+						os.Exit(1)
+					}
 				}
 
 				global.password = c.GlobalString("password")

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
@@ -54,4 +55,47 @@ func requireConfig() (*config, error) {
 	}
 
 	return cfg, nil
+}
+
+// match the machine's requested tasks to the tasks defined in the config
+func (c *config) filterTasks(argMachine string, argTasks []string) error {
+	for mn := range c.Machines {
+		// remove irrelevant machines
+		if mn != argMachine {
+			delete(c.Machines, mn)
+			continue
+		}
+	}
+
+	// remove irrelevant tasks
+	auxTasks := map[string]*task{}
+	auxRequests := []string{}
+	for _, mr := range c.Machines[argMachine].Requests {
+		if _, ok := c.Tasks[mr]; ok {
+			auxTasks[mr] = c.Tasks[mr]
+			auxRequests = append(auxRequests, mr)
+		} else {
+			return fmt.Errorf("The requested task %s is not defined in alter.yaml", mr)
+		}
+	}
+
+	c.Tasks = auxTasks
+	c.Machines[argMachine].Requests = auxRequests
+
+	// remove tasks not indicated and check if they tasks are valid for the machine
+	if len(argTasks) > 0 {
+		auxTasks = map[string]*task{}
+
+		for _, argTask := range argTasks {
+			if _, ok := c.Tasks[argTask]; !ok {
+				return fmt.Errorf("The requested task %s is not specified for %s in alter.yaml", argTask, argMachine)
+			}
+
+			auxTasks[argTask] = c.Tasks[argTask]
+		}
+	}
+
+	c.Tasks = auxTasks
+
+	return nil
 }

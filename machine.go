@@ -1,28 +1,26 @@
 package main
 
-import (
-	"log"
-
-	"github.com/andrewrynhard/go-ordered-map"
-)
-
-type taskMap struct {
-	Map *ordered.OrderedMap
-}
+import "log"
 
 type machine struct {
 	Environment map[string]string `yaml:"environment"`
 	Requests    []string          `yaml:"requests"`
 }
 
-func provisionMachine(tasks []*task, a *alterant, flags *provisionFlags) error {
-	log.Printf("Provisioning: %s", a.machineName)
+func provisionMachine(machine string, cfg *config, flags *provisionFlags) error {
+	log.Printf("Provisioning: %s", machine)
 
-	for _, task := range tasks {
-		// log.Printf("Performing task: %s", task.name)
+	// iterate over the request array to preserve the order of tasks
+	for _, request := range cfg.Machines[machine].Requests {
+		task := cfg.Tasks[request]
+		if task == nil {
+			continue
+		}
+
+		log.Printf("Performing task: %s", request)
 
 		// export environment variables specific to the specified machine
-		prepareEnvironment(a.machineName, a.machinePtr)
+		prepareEnvironment(machine, cfg.Machines[machine])
 
 		if flags.links {
 			// create the links specified in the task
@@ -34,7 +32,7 @@ func provisionMachine(tasks []*task, a *alterant, flags *provisionFlags) error {
 
 		if flags.commands {
 			// execute the commands specified in the task
-			err := task.executeCommands(a.cfg)
+			err := task.executeCommands(cfg)
 			if err != nil {
 				return err
 			}
