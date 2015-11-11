@@ -73,10 +73,6 @@ func removeLink(link string) error {
 	return nil
 }
 
-func removeLinks() {
-
-}
-
 func clobberPath(path string) error {
 	stat, err := os.Lstat(path)
 	if os.IsNotExist(err) {
@@ -113,6 +109,7 @@ func createParents(link string) error {
 	return nil
 }
 
+// TODO: validate symlinks
 func (t *task) createLinks(flags *provisionFlags) error {
 	for target, dest := range t.Links {
 
