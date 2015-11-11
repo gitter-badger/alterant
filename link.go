@@ -7,10 +7,11 @@ import (
 	"path"
 )
 
-type links map[string]string
+type symlinkTarget string
+type symlinkDestination string
 
-func (l *links) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	var aux map[string]string
+func (t *symlinkTarget) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var aux string
 
 	if err := unmarshal(&aux); err != nil {
 		return err
@@ -21,16 +22,21 @@ func (l *links) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 
-	home := os.Getenv("HOME")
+	*t = symlinkTarget(path.Join(cwd, os.ExpandEnv(aux)))
 
-	for target, dest := range aux {
-		target = path.Join(cwd, os.ExpandEnv(target))
-		dest = path.Join(home, os.ExpandEnv(dest))
+	return nil
+}
 
-		aux[target] = dest
+func (t *symlinkDestination) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var aux string
+
+	if err := unmarshal(&aux); err != nil {
+		return err
 	}
 
-	*l = links(aux)
+	home := os.Getenv("HOME")
+
+	*t = symlinkDestination(path.Join(home, os.ExpandEnv(aux)))
 
 	return nil
 }
@@ -111,20 +117,20 @@ func (t *task) createLinks(flags *provisionFlags) error {
 	for target, dest := range t.Links {
 
 		if flags.parents {
-			err := createParents(dest)
+			err := createParents(string(dest))
 			if err != nil {
 				return err
 			}
 		}
 
 		if flags.clobber {
-			err := clobberPath(dest)
+			err := clobberPath(string(dest))
 			if err != nil {
 				return err
 			}
 		}
 
-		err := os.Symlink(target, dest)
+		err := os.Symlink(string(target), string(dest))
 		if err != nil {
 			return err
 		}

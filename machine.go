@@ -46,7 +46,7 @@ func cleanMachine(machine string, cfg *config) error {
 	log.Printf("Cleaning: %s", machine)
 	for _, task := range cfg.Tasks {
 		for _, link := range task.Links {
-			removeLink(link)
+			removeLink(string(link))
 		}
 	}
 
