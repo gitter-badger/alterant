@@ -38,7 +38,7 @@ func provisionMachine(machine string, cfg *config, flags *provisionFlags) error 
 			}
 		}
 
-		log.Printf("Request fulfilled: %s", task)
+		log.Printf("Request fulfilled: %s", request)
 	}
 
 	log.Printf("Provisioned: %s", machine)
