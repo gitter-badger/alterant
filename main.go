@@ -4,10 +4,17 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path"
 
+	"github.com/andrewrynhard/go-ordered-map"
 	"github.com/codegangsta/cli"
 )
+
+type alterant struct {
+	cfg         *config
+	actions     map[string]*ordered.OrderedMap
+	machineName string
+	machinePtr  *machine
+}
 
 type globalFlags struct {
 	password string
@@ -31,44 +38,40 @@ type decryptFlags struct {
 	remove bool
 }
 
-func requireConfig() (*config, error) {
-	// require that the config is named 'alter.yaml'
-	file := "alter.yaml"
-
-	cwd, err := os.Getwd()
-	if err != nil {
-		return nil, err
+// match the machine's requested tasks to the tasks defined in the config
+func (a *alterant) matchMachineRequests(c *config) {
+	a.actions = map[string]*ordered.OrderedMap{}
+	for mn, mp := range c.Machines {
+		a.actions[mn] = ordered.NewOrderedMap()
+		// insert tasks based on the order of the requested tasks
+		for _, mt := range mp.Requests {
+			// search the defined tasks for the requested task
+			for tn, tp := range c.Tasks {
+				if mt == tn {
+					a.actions[mn].Add(tn, tp)
+				}
+			}
+		}
 	}
-
-	// require that alter.yaml exists in the cwd
-	if _, err := os.Stat(path.Join(cwd, file)); os.IsNotExist(err) {
-		return nil, err
-	}
-
-	cfg, err := loadConfig(file)
-	if err != nil {
-		return nil, err
-	}
-
-	return cfg, nil
 }
 
-func parseArgs(machine string, tasks []string, cfg *config) ([]*task, error) {
-	var targetTasks []*task
+func parseArgs(machineName string, requestedTasks []string, a *alterant) ([]*task, error) {
+	var matchedTasks []*task
 
-	if len(tasks) != 0 {
-		for _, t := range tasks {
-			if !cfg.actions[machine].Contains(t) {
-				return nil, fmt.Errorf("The requested task %s is not specified for %s in alter.yaml", t, machine)
+	// tasks requested in the args need to be validated first
+	if len(requestedTasks) != 0 {
+		for _, t := range requestedTasks {
+			if !a.actions[machineName].Contains(t) {
+				return nil, fmt.Errorf("The requested task %s is not specified for %s in alter.yaml", t, machineName)
 			}
 
-			targetTasks = append(targetTasks, cfg.actions[machine].Value(t).(*task))
+			matchedTasks = append(matchedTasks, a.actions[machineName].Value(t).(*task))
 		}
 
 	} else {
-		_, val, next := cfg.actions[machine].NewIter()
+		_, val, next := a.actions[machineName].NewIter()
 
-		targetTasks = append(targetTasks, val.(*task))
+		matchedTasks = append(matchedTasks, val.(*task))
 		for {
 
 			key, val := next()
@@ -77,11 +80,11 @@ func parseArgs(machine string, tasks []string, cfg *config) ([]*task, error) {
 				break
 			}
 
-			targetTasks = append(targetTasks, val.(*task))
+			matchedTasks = append(matchedTasks, val.(*task))
 		}
 	}
 
-	return targetTasks, nil
+	return matchedTasks, nil
 }
 
 func main() {
@@ -128,6 +131,13 @@ func main() {
 					os.Exit(1)
 				}
 
+				machineName := c.Args().First()
+				requestedTasks := c.Args().Tail()
+
+				// export the machine name to the environment
+				log.Printf("Exporting MACHINE: %s\n", machineName)
+				os.Setenv("MACHINE", machineName)
+
 				global.password = c.GlobalString("password")
 
 				flags := &provisionFlags{global: global}
@@ -144,15 +154,20 @@ func main() {
 					log.Fatal(err)
 				}
 
-				machine := c.Args().First()
-				taskArgs := c.Args().Tail()
+				a := &alterant{
+					cfg:         cfg,
+					machineName: machineName,
+					machinePtr:  cfg.Machines[machineName],
+				}
 
-				tasks, err := parseArgs(machine, taskArgs, cfg)
+				a.matchMachineRequests(cfg)
+
+				matchedTasks, err := parseArgs(machineName, requestedTasks, a)
 				if err != nil {
 					log.Fatal(err)
 				}
 
-				err = provisionMachine(cfg.machines[machine], tasks, cfg, flags)
+				err = provisionMachine(matchedTasks, a, flags)
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -184,7 +199,7 @@ func main() {
 					log.Fatal(err)
 				}
 
-				err = encryptFiles(cfg.encrypted, flags)
+				err = encryptFiles(cfg.Encrypted, flags)
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -216,8 +231,8 @@ func main() {
 					log.Fatal(err)
 				}
 
-				if len(cfg.encrypted) > 0 {
-					err = decryptFiles(cfg.encrypted, flags)
+				if len(cfg.Encrypted) > 0 {
+					err = decryptFiles(cfg.Encrypted, flags)
 					if err != nil {
 						log.Fatal(err)
 					}
@@ -238,16 +253,16 @@ func main() {
 			},
 			Action: func(c *cli.Context) {
 				// TODO: clean this up
-				if len(c.Args()) < 1 {
-					cli.ShowCommandHelp(c, "clean")
-					os.Exit(1)
-				}
-
+				// if len(c.Args()) < 1 {
+				// 	cli.ShowCommandHelp(c, "clean")
+				// 	os.Exit(1)
+				// }
+				//
 				// cfg, err := requireConfig()
 				// if err != nil {
 				// 	log.Fatal(err)
 				// }
-
+				//
 				// machine := c.Args().First()
 				//
 				// removeTasks := map[string]struct{}{}
