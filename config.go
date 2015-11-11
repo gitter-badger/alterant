@@ -35,7 +35,7 @@ func loadConfig(file string) (*config, error) {
 	return cfg, nil
 }
 
-func requireConfig() (*config, error) {
+func acquireConfig() (*config, error) {
 	// require that the config is named 'alter.yaml'
 	file := "alter.yaml"
 
@@ -59,6 +59,10 @@ func requireConfig() (*config, error) {
 
 // match the machine's requested tasks to the tasks defined in the config
 func (c *config) filterTasks(argMachine string, argTasks []string) error {
+	if _, ok := c.Machines[argMachine]; !ok {
+		return fmt.Errorf("Machine %s is not defined in alter.yaml", argMachine)
+	}
+
 	for mn := range c.Machines {
 		// remove irrelevant machines
 		if mn != argMachine {
@@ -82,7 +86,8 @@ func (c *config) filterTasks(argMachine string, argTasks []string) error {
 	c.Tasks = auxTasks
 	c.Machines[argMachine].Requests = auxRequests
 
-	// remove tasks not indicated and check if they tasks are valid for the machine
+	// remove tasks not indicated as arguments and check if they tasks are valid
+	// for the machine
 	if len(argTasks) > 0 {
 		auxTasks = map[string]*task{}
 

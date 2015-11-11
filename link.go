@@ -67,6 +67,10 @@ func removeLink(link string) error {
 	return nil
 }
 
+func removeLinks() {
+
+}
+
 func clobberPath(path string) error {
 	stat, err := os.Lstat(path)
 	if os.IsNotExist(err) {

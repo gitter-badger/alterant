@@ -42,27 +42,13 @@ func provisionMachine(machine string, cfg *config, flags *provisionFlags) error 
 	return nil
 }
 
-// TODO: clean this up
-func cleanMachine(machine string, tasks []*task, cfg *config) error {
-	// for _, task := range tasks {
-	// 	for _, link := range task.Links {
-	// 		if removeTasks != nil {
-	// 			if _, ok := removeTasks[task]; ok {
-	// 				err := link.removeLink()
-	// 				if err != nil {
-	// 					return err
-	// 				}
-	// 			} else {
-	// 				continue
-	// 			}
-	// 		} else {
-	// 			err := link.removeLink()
-	// 			if err != nil {
-	// 				return err
-	// 			}
-	// 		}
-	// 	}
-	// }
+func cleanMachine(machine string, cfg *config) error {
+	log.Printf("Cleaning: %s", machine)
+	for _, task := range cfg.Tasks {
+		for _, link := range task.Links {
+			removeLink(link)
+		}
+	}
 
 	return nil
 }

@@ -1,5 +1,7 @@
 package main
 
+// TODO: create a `prepare` command that deletes any decrypted files
+// TODO: DRY the common app command code
 import (
 	"log"
 	"os"
@@ -95,7 +97,7 @@ func main() {
 				cmd := app.Command("decrypt")
 				cmd.Run(c)
 
-				cfg, err := requireConfig()
+				cfg, err := acquireConfig()
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -111,6 +113,43 @@ func main() {
 				}
 			},
 		},
+		{
+			Name:    "clean",
+			Aliases: []string{"c"},
+			Usage:   "clean provisioned links",
+			Flags: []cli.Flag{
+				cli.BoolFlag{
+					Name:  "remove",
+					Usage: "remove encrypted files, defaults to false",
+				},
+			},
+			Action: func(c *cli.Context) {
+				if len(c.Args()) < 1 {
+					cli.ShowCommandHelp(c, "clean")
+					os.Exit(1)
+				}
+
+				argMachine := c.Args().First()
+				argTasks := c.Args().Tail()
+
+				cfg, err := acquireConfig()
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				err = cfg.filterTasks(argMachine, argTasks)
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				err = cleanMachine(argMachine, cfg)
+				if err != nil {
+					log.Fatal(err)
+				}
+
+			},
+		},
+
 		{
 			Name:    "encrypt",
 			Aliases: []string{"e"},
@@ -132,7 +171,7 @@ func main() {
 				flags := &encryptFlags{global: global}
 				flags.remove = c.BoolT("remove")
 
-				cfg, err := requireConfig()
+				cfg, err := acquireConfig()
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -166,7 +205,7 @@ func main() {
 				flags := &decryptFlags{global: global}
 				flags.remove = c.BoolT("remove")
 
-				cfg, err := requireConfig()
+				cfg, err := acquireConfig()
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -179,48 +218,6 @@ func main() {
 				} else {
 					log.Println("No encrypted files are specified in alter.yaml")
 				}
-			},
-		},
-		{
-			Name:    "clean",
-			Aliases: []string{"c"},
-			Usage:   "clean provisioned links",
-			Flags: []cli.Flag{
-				cli.BoolFlag{
-					Name:  "remove",
-					Usage: "remove encrypted files, defaults to false",
-				},
-			},
-			Action: func(c *cli.Context) {
-				// TODO: clean this up
-				// if len(c.Args()) < 1 {
-				// 	cli.ShowCommandHelp(c, "clean")
-				// 	os.Exit(1)
-				// }
-				//
-				// cfg, err := requireConfig()
-				// if err != nil {
-				// 	log.Fatal(err)
-				// }
-				//
-				// machine := c.Args().First()
-				//
-				// removeTasks := map[string]struct{}{}
-				// if len(c.Args()) > 1 {
-				// 	for i := 1; i < len(c.Args()); i++ {
-				// 		removeTasks[c.Args()[i]] = struct{}{}
-				// 	}
-				//
-				// 	err = cleanMachine(machine, removeTasks, cfg)
-				// 	if err != nil {
-				// 		log.Fatal(err)
-				// 	}
-				// } else {
-				// 	err = cleanMachine(machine, nil, cfg)
-				// 	if err != nil {
-				// 		log.Fatal(err)
-				// 	}
-				// }
 			},
 		},
 	}
