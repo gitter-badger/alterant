@@ -35,7 +35,6 @@ func (l *links) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return nil
 }
 
-// TODO: clean this up
 func isSymlink(link string) (bool, error) {
 	stat, err := os.Lstat(link)
 	if os.IsNotExist(err) {
@@ -49,10 +48,8 @@ func isSymlink(link string) (bool, error) {
 	return true, nil
 }
 
-// TODO: clean this up
 func removeLink(link string) error {
 	ok, err := isSymlink(link)
-
 	if err != nil {
 		return err
 	}
