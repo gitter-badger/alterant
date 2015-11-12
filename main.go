@@ -13,13 +13,15 @@ import (
 	"github.com/codegangsta/cli"
 )
 
+var version string
+
 func main() {
 	var ignoreArgCheck bool
 
 	app := cli.NewApp()
 
 	app.Usage = "Alter your machine with ease."
-	app.Version = "0.1.0"
+	app.Version = version
 
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
