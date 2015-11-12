@@ -1,4 +1,4 @@
-package main
+package encrypter
 
 import (
 	"crypto/aes"
@@ -9,11 +9,18 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
 
 	"github.com/andrewrynhard/go-mask"
+	"github.com/autonomy/alterant/logger"
 )
+
+// DefaultEncryption is a basic encryption method and is the default
+type DefaultEncryption struct {
+	logger   *logWrapper.LogWrapper
+	Password string
+	Remove   bool
+}
 
 // TODO: verify that the password works
 func decrypt(cipherstring string, keystring string) string {
@@ -92,7 +99,6 @@ func readFromFile(file string) ([]byte, error) {
 func decryptFile(file string, key string) error {
 	content, err := readFromFile(file)
 	if err != nil {
-		fmt.Println(err)
 		return err
 	}
 
@@ -133,7 +139,8 @@ func key32BitFromPassword(password []byte) string {
 	return hex.EncodeToString(hasher.Sum(nil))
 }
 
-func hashPassword(password string) (string, error) {
+// HashPassword creates an md5 sum from a string, ensuring a 32 byte key
+func (de *DefaultEncryption) HashPassword(password string) (string, error) {
 	var key string
 
 	if password != "" {
@@ -152,8 +159,9 @@ func hashPassword(password string) (string, error) {
 	return key, nil
 }
 
-func decryptFiles(files []string, flags *decryptFlags) error {
-	key, err := hashPassword(flags.global.password)
+// DecryptFiles decrypts `files` based on the hash of `password`
+func (de *DefaultEncryption) DecryptFiles(files []string) error {
+	key, err := de.HashPassword(de.Password)
 	if err != nil {
 		return err
 	}
@@ -165,13 +173,13 @@ func decryptFiles(files []string, flags *decryptFlags) error {
 			return err
 		}
 
-		log.Printf("Decrypting: %s", file)
+		de.logger.Info("Decrypting: %s", file)
 		err = decryptFile(file, key)
 		if err != nil {
 			return err
 		}
 
-		if flags.remove {
+		if de.Remove {
 			err = os.Remove(file)
 			if err != nil {
 				return err
@@ -182,8 +190,9 @@ func decryptFiles(files []string, flags *decryptFlags) error {
 	return nil
 }
 
-func encryptFiles(files []string, flags *encryptFlags) error {
-	key, err := hashPassword(flags.global.password)
+// EncryptFiles encrypts `files` based on the hash of `password`
+func (de *DefaultEncryption) EncryptFiles(files []string) error {
+	key, err := de.HashPassword(de.Password)
 	if err != nil {
 		return err
 	}
@@ -194,13 +203,13 @@ func encryptFiles(files []string, flags *encryptFlags) error {
 			return err
 		}
 
-		log.Printf("Encrypting: %s", file)
+		de.logger.Info("Encrypting: %s", file)
 		err = encryptFile(file, key)
 		if err != nil {
 			return err
 		}
 
-		if flags.remove {
+		if de.Remove {
 			err = os.Remove(file)
 			if err != nil {
 				return err
@@ -209,4 +218,13 @@ func encryptFiles(files []string, flags *encryptFlags) error {
 	}
 
 	return nil
+}
+
+// NewDefaultEncryption returns an instance of `DefaultEncryption`
+func NewDefaultEncryption(password string, remove bool, logger *logWrapper.LogWrapper) *DefaultEncryption {
+	return &DefaultEncryption{
+		logger:   logger,
+		Password: password,
+		Remove:   remove,
+	}
 }

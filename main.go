@@ -6,35 +6,15 @@ import (
 	"log"
 	"os"
 
+	"github.com/autonomy/alterant/config"
+	"github.com/autonomy/alterant/encrypter"
+	"github.com/autonomy/alterant/logger"
+	"github.com/autonomy/alterant/provisioner"
 	"github.com/codegangsta/cli"
 )
 
-type globalFlags struct {
-	password string
-}
-
-type provisionFlags struct {
-	global   *globalFlags
-	links    bool
-	commands bool
-	parents  bool
-	clobber  bool
-}
-
-type encryptFlags struct {
-	global *globalFlags
-	remove bool
-}
-
-type decryptFlags struct {
-	global *globalFlags
-	remove bool
-}
-
 func main() {
 	var ignoreArgCheck bool
-
-	global := &globalFlags{}
 
 	app := cli.NewApp()
 
@@ -46,6 +26,10 @@ func main() {
 			Name:  "password",
 			Value: "",
 			Usage: "password to encrypt/decrypt a file",
+		},
+		cli.BoolFlag{
+			Name:  "verbose",
+			Usage: "use verbose logging",
 		},
 	}
 	app.Commands = []cli.Command{
@@ -77,37 +61,27 @@ func main() {
 					os.Exit(1)
 				}
 
+				// decrypt files before provisioning
 				ignoreArgCheck = true
+				cmd := app.Command("decrypt")
+				cmd.Run(c)
 
 				argMachine := c.Args().First()
 				argTasks := c.Args().Tail()
 
-				// export the machine name to the environment
-				log.Printf("Exporting MACHINE: %s\n", argMachine)
-				os.Setenv("MACHINE", argMachine)
-
-				global.password = c.GlobalString("password")
-
-				flags := &provisionFlags{global: global}
-				flags.links = c.BoolT("links")
-				flags.commands = c.BoolT("commands")
-				flags.parents = c.BoolT("parents")
-				flags.clobber = c.BoolT("clobber")
-
-				cmd := app.Command("decrypt")
-				cmd.Run(c)
-
-				cfg, err := acquireConfig()
+				cfg, err := config.AcquireConfig(argMachine)
 				if err != nil {
 					log.Fatal(err)
 				}
 
-				err = cfg.filterTasks(argMachine, argTasks)
+				err = cfg.FilterTasks(argMachine, argTasks)
 				if err != nil {
 					log.Fatal(err)
 				}
 
-				err = provisionMachine(argMachine, cfg, flags)
+				provisioner := provisioner.NewDefaultProvisioner(argMachine, cfg, c)
+
+				err = provisioner.Provision()
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -126,17 +100,19 @@ func main() {
 				argMachine := c.Args().First()
 				argTasks := c.Args().Tail()
 
-				cfg, err := acquireConfig()
+				cfg, err := config.AcquireConfig(argMachine)
 				if err != nil {
 					log.Fatal(err)
 				}
 
-				err = cfg.filterTasks(argMachine, argTasks)
+				err = cfg.FilterTasks(argMachine, argTasks)
 				if err != nil {
 					log.Fatal(err)
 				}
 
-				err = cleanMachine(argMachine, cfg)
+				provisioner := provisioner.NewDefaultProvisioner(argMachine, cfg, c)
+
+				err = provisioner.Clean()
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -160,19 +136,23 @@ func main() {
 					os.Exit(1)
 				}
 
-				global.password = c.GlobalString("password")
-
-				flags := &encryptFlags{global: global}
-				flags.remove = c.BoolT("remove")
-
-				cfg, err := acquireConfig()
+				cfg, err := config.AcquireConfig("")
 				if err != nil {
 					log.Fatal(err)
 				}
 
-				err = encryptFiles(cfg.Encrypted, flags)
-				if err != nil {
-					log.Fatal(err)
+				logger := logWrapper.NewLogWrapper(c.GlobalBool("verbose"))
+
+				if len(cfg.Encrypted) > 0 {
+					encrypter := encrypter.NewDefaultEncryption(c.GlobalString("password"),
+						c.BoolT("remove"), logger)
+
+					err = encrypter.EncryptFiles(cfg.Encrypted)
+					if err != nil {
+						log.Fatal(err)
+					}
+				} else {
+					log.Println("No encrypted files are specified in alter.yaml")
 				}
 			},
 		},
@@ -194,18 +174,18 @@ func main() {
 					}
 				}
 
-				global.password = c.GlobalString("password")
-
-				flags := &decryptFlags{global: global}
-				flags.remove = c.BoolT("remove")
-
-				cfg, err := acquireConfig()
+				cfg, err := config.AcquireConfig("")
 				if err != nil {
 					log.Fatal(err)
 				}
 
+				logger := logWrapper.NewLogWrapper(c.GlobalBool("verbose"))
+
 				if len(cfg.Encrypted) > 0 {
-					err = decryptFiles(cfg.Encrypted, flags)
+					encrypter := encrypter.NewDefaultEncryption(c.GlobalString("password"),
+						c.BoolT("remove"), logger)
+
+					err = encrypter.DecryptFiles(cfg.Encrypted)
 					if err != nil {
 						log.Fatal(err)
 					}

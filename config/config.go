@@ -1,4 +1,4 @@
-package main
+package config
 
 import (
 	"fmt"
@@ -6,20 +6,27 @@ import (
 	"os"
 	"path"
 
+	"github.com/autonomy/alterant/machine"
+	"github.com/autonomy/alterant/task"
+
 	"gopkg.in/yaml.v2"
 )
 
-type config struct {
-	Machines  map[string]*machine `yaml:"machines"`
-	Tasks     map[string]*task    `yaml:"tasks"`
-	Encrypted []string            `yaml:"encrypted"`
+// Config represents `alter.yaml`
+type Config struct {
+	Machines  map[string]*machine.Machine `yaml:"machines"`
+	Tasks     map[string]*task.Task       `yaml:"tasks"`
+	Encrypted []string                    `yaml:"encrypted"`
 }
 
-func newConfig() *config {
-	return &config{}
+func newConfig() *Config {
+	return &Config{}
 }
 
-func loadConfig(file string) (*config, error) {
+func loadConfig(file string, argMachine string) (*Config, error) {
+	// required by the custom unmarshalling of SymlinkTarget and SymlinkDestination
+	os.Setenv("MACHINE", argMachine)
+
 	bytes, err := ioutil.ReadFile(file)
 	if err != nil {
 		return nil, err
@@ -35,7 +42,8 @@ func loadConfig(file string) (*config, error) {
 	return cfg, nil
 }
 
-func acquireConfig() (*config, error) {
+// AcquireConfig unmarshalls alter.yaml and returns the representation as a Config
+func AcquireConfig(argMachine string) (*Config, error) {
 	// require that the config is named 'alter.yaml'
 	file := "alter.yaml"
 
@@ -49,7 +57,7 @@ func acquireConfig() (*config, error) {
 		return nil, err
 	}
 
-	cfg, err := loadConfig(file)
+	cfg, err := loadConfig(file, argMachine)
 	if err != nil {
 		return nil, err
 	}
@@ -57,8 +65,8 @@ func acquireConfig() (*config, error) {
 	return cfg, nil
 }
 
-// match the machine's requested tasks to the tasks defined in the config
-func (c *config) filterTasks(argMachine string, argTasks []string) error {
+// FilterTasks filters tasks based on the machine, machine requests, and args passed in
+func (c *Config) FilterTasks(argMachine string, argTasks []string) error {
 	if _, ok := c.Machines[argMachine]; !ok {
 		return fmt.Errorf("Machine %s is not defined in alter.yaml", argMachine)
 	}
@@ -72,7 +80,7 @@ func (c *config) filterTasks(argMachine string, argTasks []string) error {
 	}
 
 	// remove irrelevant tasks
-	auxTasks := map[string]*task{}
+	auxTasks := map[string]*task.Task{}
 	auxRequests := []string{}
 	for _, mr := range c.Machines[argMachine].Requests {
 		if _, ok := c.Tasks[mr]; ok {
@@ -89,7 +97,7 @@ func (c *config) filterTasks(argMachine string, argTasks []string) error {
 	// remove tasks not indicated as arguments and check if they tasks are valid
 	// for the machine
 	if len(argTasks) > 0 {
-		auxTasks = map[string]*task{}
+		auxTasks = map[string]*task.Task{}
 
 		for _, argTask := range argTasks {
 			if _, ok := c.Tasks[argTask]; !ok {
