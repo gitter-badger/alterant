@@ -35,7 +35,7 @@ func (p *DefaultProvisioner) Provision(requests []string) error {
 		p.Logger.Info("Performing task: %s", request)
 
 		// export environment variables specific to the specified machine
-		p.Environment.Set(p.Machine, p.Cfg.Machines[p.Machine])
+		p.Environment.Set(p.Cfg.Environment)
 
 		// create the links specified in the task
 		// err := p.Linker.CreateLinks(task.Links)
@@ -68,19 +68,19 @@ func (p *DefaultProvisioner) Clean() error {
 }
 
 // NewDefaultProvisioner returns and instance of a `DefaultProvisioner`
-func NewDefaultProvisioner(argMachine string, cfg *config.Config, c *cli.Context) *DefaultProvisioner {
+func NewDefaultProvisioner(machine string, cfg *config.Config, c *cli.Context) *DefaultProvisioner {
 	logger := logWrapper.NewLogWrapper(c.GlobalBool("verbose"))
 
 	p := &DefaultProvisioner{
 		Logger:      logger,
-		Environment: environment.NewEnvironment(argMachine, logger),
+		Environment: environment.NewEnvironment(machine, logger),
 		Encrypter: encrypter.NewDefaultEncryption(c.GlobalString("password"),
 			c.BoolT("remove"), logger),
 		Linker: linker.NewDefaultLinker(c.BoolT("links"), c.Bool("parents"),
 			c.Bool("clobber"), logger),
 		Commander: commander.NewDefaultCommander(c.BoolT("commands"), logger),
 		Cfg:       cfg,
-		Machine:   argMachine,
+		Machine:   machine,
 	}
 
 	return p

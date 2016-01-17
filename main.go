@@ -119,26 +119,20 @@ func main() {
 					os.Exit(1)
 				}
 
-				machine := c.Args().First()
-				requests := c.Args().Tail()
-
-				cfg, err := config.AcquireConfig(machine)
-				if err != nil {
-					log.Fatal(err)
-				}
-
-				err = cfg.FilterTasks(machine, requests)
-				if err != nil {
-					log.Fatal(err)
-				}
-
-				provisioner := provisioner.NewDefaultProvisioner(machine, cfg, c)
-
-				err = provisioner.Clean()
-				if err != nil {
-					log.Fatal(err)
-				}
-
+				// machine := c.Args().First()
+				// requests := c.Args().Tail()
+				//
+				// cfg, err := config.AcquireConfig(machine)
+				// if err != nil {
+				// 	log.Fatal(err)
+				// }
+				//
+				// provisioner := provisioner.NewDefaultProvisioner(machine, cfg, c)
+				//
+				// err = provisioner.Clean()
+				// if err != nil {
+				// 	log.Fatal(err)
+				// }
 			},
 		},
 

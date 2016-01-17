@@ -4,7 +4,6 @@ import (
 	"os"
 
 	"github.com/autonomy/alterant/logger"
-	"github.com/autonomy/alterant/machine"
 )
 
 // Environment represents the environment variables in alter.yaml
@@ -14,8 +13,8 @@ type Environment struct {
 }
 
 // Set exports the variables to the environment
-func (e *Environment) Set(mn string, mp *machine.Machine) {
-	for variable, value := range mp.Environment {
+func (e *Environment) Set(environment map[string]string) {
+	for variable, value := range environment {
 		e.logger.Info("Exporting %s: %s", os.ExpandEnv(variable), os.ExpandEnv(value))
 		os.Setenv(os.ExpandEnv(variable), os.ExpandEnv(value))
 	}
