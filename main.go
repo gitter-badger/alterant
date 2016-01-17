@@ -80,31 +80,33 @@ func main() {
 				// cmd := app.Command("decrypt")
 				// cmd.Run(c)
 
-				argMachine := c.Args().First()
-				// argTasks := c.Args().Tail()
-
-				err := repo.OpenMachineByName(argMachine)
+				machine, err := repo.CurrentMachine()
 				if err != nil {
-					fmt.Println(err)
+					log.Fatal(err)
 					os.Exit(1)
 				}
 
-				cfg, err := config.AcquireConfig(argMachine)
+				requests := c.Args()
+
+				err = repo.OpenMachineByName(machine)
 				if err != nil {
 					log.Fatal(err)
+					os.Exit(1)
 				}
-				fmt.Printf("%v", cfg.Tasks["osx_misc"])
-				// err = cfg.FilterTasks(argMachine, argTasks)
-				// if err != nil {
-				// 	log.Fatal(err)
-				// }
-				//
-				// provisioner := provisioner.NewDefaultProvisioner(argMachine, cfg, c)
-				//
-				// err = provisioner.Provision()
-				// if err != nil {
-				// 	log.Fatal(err)
-				// }
+
+				cfg, err := config.AcquireConfig(machine)
+				if err != nil {
+					log.Fatal(err)
+					os.Exit(1)
+				}
+
+				provisioner := provisioner.NewDefaultProvisioner(machine, cfg, c)
+
+				err = provisioner.Provision(requests)
+				if err != nil {
+					log.Fatal(err)
+					os.Exit(1)
+				}
 			},
 		},
 		{
@@ -117,20 +119,20 @@ func main() {
 					os.Exit(1)
 				}
 
-				argMachine := c.Args().First()
-				argTasks := c.Args().Tail()
+				machine := c.Args().First()
+				requests := c.Args().Tail()
 
-				cfg, err := config.AcquireConfig(argMachine)
+				cfg, err := config.AcquireConfig(machine)
 				if err != nil {
 					log.Fatal(err)
 				}
 
-				err = cfg.FilterTasks(argMachine, argTasks)
+				err = cfg.FilterTasks(machine, requests)
 				if err != nil {
 					log.Fatal(err)
 				}
 
-				provisioner := provisioner.NewDefaultProvisioner(argMachine, cfg, c)
+				provisioner := provisioner.NewDefaultProvisioner(machine, cfg, c)
 
 				err = provisioner.Clean()
 				if err != nil {
@@ -227,9 +229,9 @@ func main() {
 							cli.ShowSubcommandHelp(c)
 							os.Exit(1)
 						}
-						argMachine := c.Args().First()
+						machine := c.Args().First()
 
-						err := repo.CreateMachine(argMachine)
+						err := repo.CreateMachine(machine)
 						if err != nil {
 							fmt.Println(err)
 							os.Exit(1)
@@ -244,9 +246,9 @@ func main() {
 							cli.ShowSubcommandHelp(c)
 							os.Exit(1)
 						}
-						argMachine := c.Args().First()
+						machine := c.Args().First()
 
-						err := repo.OpenMachineByName(argMachine)
+						err := repo.OpenMachineByName(machine)
 						if err != nil {
 							fmt.Println(err)
 							os.Exit(1)

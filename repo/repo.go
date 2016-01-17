@@ -143,3 +143,27 @@ func ListMachines() error {
 
 	return nil
 }
+
+func CurrentMachine() (machine string, err error) {
+	repo, err := git.OpenRepository(repoPath)
+	if err != nil {
+		return "", err
+	}
+
+	head, err := repo.Head()
+	if err != nil {
+		return "", err
+	}
+
+	branch := head.Branch()
+	if err != nil {
+		return "", err
+	}
+
+	branchName, err := branch.Name()
+	if err != nil {
+		return "", err
+	}
+
+	return branchName, nil
+}
