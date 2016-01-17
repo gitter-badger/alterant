@@ -27,13 +27,13 @@ func (p *DefaultProvisioner) Provision() error {
 		p.state.Environment.Set(p.state.Machine, p.state.Cfg.Machines[p.state.Machine])
 
 		// create the links specified in the task
-		err := p.state.Linker.CreateLinks(task.Links)
-		if err != nil {
-			return err
-		}
+		// err := p.state.Linker.CreateLinks(task.Links)
+		// if err != nil {
+		// 	return err
+		// }
 
 		// execute the commands specified in the task
-		err = p.state.Commander.Execute(task)
+		err := p.state.Commander.Execute(task)
 		if err != nil {
 			return err
 		}
@@ -49,9 +49,9 @@ func (p *DefaultProvisioner) Provision() error {
 // Clean removes provisioned links
 func (p *DefaultProvisioner) Clean() error {
 	p.state.Logger.Info("Cleaning: %s", p.state.Machine)
-	for _, task := range p.state.Cfg.Tasks {
-		p.state.Linker.RemoveLinks(task.Links)
-	}
+	// for _, task := range p.state.Cfg.Tasks {
+	// 	p.state.Linker.RemoveLinks(task.Links)
+	// }
 
 	return nil
 }

@@ -1,5 +1,8 @@
 package linker
 
+// TODO: add a command to remove cruft and broken links from the home folder
+// that have been managed by alterant
+
 import (
 	"errors"
 	"os"

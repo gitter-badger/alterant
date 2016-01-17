@@ -12,7 +12,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-// Config represents `alter.yaml`
+// Config represents `machine.yaml`
 type Config struct {
 	Machines  map[string]*machine.Machine `yaml:"machines"`
 	Tasks     map[string]*task.Task       `yaml:"tasks"`
@@ -45,7 +45,7 @@ func loadConfig(file string, argMachine string) (*Config, error) {
 // AcquireConfig unmarshalls alter.yaml and returns the representation as a Config
 func AcquireConfig(argMachine string) (*Config, error) {
 	// require that the config is named 'alter.yaml'
-	file := "alter.yaml"
+	file := "machine.yaml"
 
 	cwd, err := os.Getwd()
 	if err != nil {

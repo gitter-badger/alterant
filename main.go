@@ -2,7 +2,18 @@ package main
 
 // TODO: create a `prepare` command that deletes any decrypted files
 // TODO: DRY the common app command code
+// TODO: add an option to specify which branch the repo should be on
+// TODO: files that are encrypted should not be decrypted unless rquired by a task
+// TODO: add a `require` field to ensure task dependencies are fulfilled
+// TODO: add encryption groups that can be encrypted with different passwords
+// TODO: add `update` command that cleans the current environment, pulls the
+// updated repo and reprovisions the machine
+// TODO: add a `update_strategy` section to the config that can indicate options
+// for updating
+// TODO: add the option to use an alter.yaml from a git repo.
+
 import (
+	"fmt"
 	"log"
 	"os"
 
@@ -10,8 +21,11 @@ import (
 	"github.com/autonomy/alterant/encrypter"
 	"github.com/autonomy/alterant/logger"
 	"github.com/autonomy/alterant/provisioner"
+	"github.com/autonomy/alterant/repo"
 	"github.com/codegangsta/cli"
 )
+
+var version string
 
 func main() {
 	var ignoreArgCheck bool
@@ -19,7 +33,7 @@ func main() {
 	app := cli.NewApp()
 
 	app.Usage = "Alter your machine with ease."
-	app.Version = "0.1.0"
+	app.Version = version
 
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
@@ -63,28 +77,34 @@ func main() {
 
 				// decrypt files before provisioning
 				ignoreArgCheck = true
-				cmd := app.Command("decrypt")
-				cmd.Run(c)
+				// cmd := app.Command("decrypt")
+				// cmd.Run(c)
 
 				argMachine := c.Args().First()
-				argTasks := c.Args().Tail()
+				// argTasks := c.Args().Tail()
+
+				err := repo.OpenMachineByName(argMachine)
+				if err != nil {
+					fmt.Println(err)
+					os.Exit(1)
+				}
 
 				cfg, err := config.AcquireConfig(argMachine)
 				if err != nil {
 					log.Fatal(err)
 				}
-
-				err = cfg.FilterTasks(argMachine, argTasks)
-				if err != nil {
-					log.Fatal(err)
-				}
-
-				provisioner := provisioner.NewDefaultProvisioner(argMachine, cfg, c)
-
-				err = provisioner.Provision()
-				if err != nil {
-					log.Fatal(err)
-				}
+				fmt.Printf("%v", cfg.Tasks["osx_misc"])
+				// err = cfg.FilterTasks(argMachine, argTasks)
+				// if err != nil {
+				// 	log.Fatal(err)
+				// }
+				//
+				// provisioner := provisioner.NewDefaultProvisioner(argMachine, cfg, c)
+				//
+				// err = provisioner.Provision()
+				// if err != nil {
+				// 	log.Fatal(err)
+				// }
 			},
 		},
 		{
@@ -192,6 +212,63 @@ func main() {
 				} else {
 					log.Println("No encrypted files are specified in alter.yaml")
 				}
+			},
+		},
+		{
+			Name:    "machine",
+			Aliases: []string{"m"},
+			Usage:   "manage a machine",
+			Subcommands: []cli.Command{
+				{
+					Name:  "new",
+					Usage: "create a new machine",
+					Action: func(c *cli.Context) {
+						if len(c.Args()) != 1 {
+							cli.ShowSubcommandHelp(c)
+							os.Exit(1)
+						}
+						argMachine := c.Args().First()
+
+						err := repo.CreateMachine(argMachine)
+						if err != nil {
+							fmt.Println(err)
+							os.Exit(1)
+						}
+					},
+				},
+				{
+					Name:  "open",
+					Usage: "open an existing machine",
+					Action: func(c *cli.Context) {
+						if len(c.Args()) != 1 {
+							cli.ShowSubcommandHelp(c)
+							os.Exit(1)
+						}
+						argMachine := c.Args().First()
+
+						err := repo.OpenMachineByName(argMachine)
+						if err != nil {
+							fmt.Println(err)
+							os.Exit(1)
+						}
+					},
+				},
+				{
+					Name:  "list",
+					Usage: "list available machines",
+					Action: func(c *cli.Context) {
+						if len(c.Args()) != 0 {
+							cli.ShowSubcommandHelp(c)
+							os.Exit(1)
+						}
+
+						err := repo.ListMachines()
+						if err != nil {
+							fmt.Println(err)
+							os.Exit(1)
+						}
+					},
+				},
 			},
 		},
 	}
