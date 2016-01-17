@@ -32,16 +32,16 @@ func (p *DefaultProvisioner) Provision(requests []string) error {
 			continue
 		}
 
-		p.Logger.Info("Performing task: %s", request)
+		p.Logger.Info("Attempting to fulfill request: %s", request)
 
 		// export environment variables specific to the specified machine
 		p.Environment.Set(p.Cfg.Environment)
 
 		// create the links specified in the task
-		// err := p.Linker.CreateLinks(task.Links)
-		// if err != nil {
-		// 	return err
-		// }
+		err := p.Linker.CreateLinks(task.Links)
+		if err != nil {
+			return err
+		}
 
 		// execute the commands specified in the task
 		// err := p.Commander.Execute(task)

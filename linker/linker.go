@@ -8,7 +8,7 @@ import (
 // Linker is the interface to a symlink handler
 type Linker interface {
 	RemoveLinks(map[SymlinkTarget]SymlinkDestination) error
-	CreateLinks(map[SymlinkTarget]SymlinkDestination) error
+	CreateLinks([]Link) error
 }
 
 // SymlinkTarget is a custom type for symlink targets

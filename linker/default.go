@@ -11,6 +11,12 @@ import (
 	"github.com/autonomy/alterant/logger"
 )
 
+type Link struct {
+	Target      SymlinkTarget      `yaml:"target"`
+	Destination SymlinkDestination `yaml:"destination"`
+	Encrypted   bool               `yaml:"encrypted"`
+}
+
 //DefaultLinker is a basic symlink manager and is the default
 type DefaultLinker struct {
 	logger  *logWrapper.LogWrapper
@@ -100,36 +106,36 @@ func (dl *DefaultLinker) RemoveLinks(links map[SymlinkTarget]SymlinkDestination)
 }
 
 // CreateLinks creates symlinks
-func (dl *DefaultLinker) CreateLinks(links map[SymlinkTarget]SymlinkDestination) error {
+func (dl *DefaultLinker) CreateLinks(links []Link) error {
 
 	// do not create links if not enabled
 	if !dl.enabled {
 		return nil
 	}
 
-	for target, dest := range links {
+	for _, link := range links {
 
 		if dl.parents {
-			err := dl.createParents(string(dest))
+			err := dl.createParents(string(link.Destination))
 			if err != nil {
 				return err
 			}
 		}
 
 		if dl.clobber {
-			err := dl.clobberPath(string(dest))
+			err := dl.clobberPath(string(link.Destination))
 			if err != nil {
 				return err
 			}
 		}
 
 		// TODO: validate symlinks
-		err := os.Symlink(string(target), string(dest))
+		err := os.Symlink(string(link.Target), string(link.Destination))
 		if err != nil {
 			return err
 		}
 
-		dl.logger.Info("Symlink created: %s -> %s", dest, target)
+		dl.logger.Info("Symlink created: %s -> %s", link.Destination, link.Target)
 	}
 
 	return nil
