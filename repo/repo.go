@@ -41,8 +41,8 @@ func OpenMachineByName(machine string) error {
 }
 
 // CreateMachine creates a new git branch that represents a machine
-func CreateMachine(machineName string) error {
-	refname := "refs/heads/" + machineName
+func CreateMachine(machine string) error {
+	refname := "refs/heads/" + machine
 
 	repo, err := git.OpenRepository(repoPath)
 	if err != nil {
@@ -69,7 +69,7 @@ func CreateMachine(machineName string) error {
 		os.RemoveAll(file)
 	}
 
-	f, err := os.Create("./machine.yaml")
+	f, err := os.Create(machine + ".yaml")
 	if err != nil {
 		return err
 	}
@@ -80,7 +80,7 @@ func CreateMachine(machineName string) error {
 		return err
 	}
 
-	idx.AddByPath("machine.yaml")
+	idx.AddByPath(machine + ".yaml")
 
 	oid, err := idx.WriteTree()
 	if err != nil {
@@ -103,7 +103,7 @@ func CreateMachine(machineName string) error {
 		When:  time.Now(),
 	}
 
-	message := "Add machine: " + machineName
+	message := "Add machine: " + machine
 
 	// leave out the `parents` since this is an orphaned branch
 	_, err = repo.CreateCommit(refname, signature, signature, message, tree)

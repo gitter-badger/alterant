@@ -44,10 +44,10 @@ func (p *DefaultProvisioner) Provision(requests []string) error {
 		}
 
 		// execute the commands specified in the task
-		// err := p.Commander.Execute(task)
-		// if err != nil {
-		// 	return err
-		// }
+		err = p.Commander.Execute(task)
+		if err != nil {
+			return err
+		}
 
 		p.Logger.Info("Request fulfilled: %s", request)
 	}

@@ -21,9 +21,9 @@ func newConfig() *Config {
 	return &Config{}
 }
 
-func loadConfig(file string, argMachine string) (*Config, error) {
+func loadConfig(file string, machine string) (*Config, error) {
 	// required by the custom unmarshalling of SymlinkTarget and SymlinkDestination
-	os.Setenv("MACHINE", argMachine)
+	os.Setenv("MACHINE", machine)
 
 	bytes, err := ioutil.ReadFile(file)
 	if err != nil {
@@ -41,9 +41,8 @@ func loadConfig(file string, argMachine string) (*Config, error) {
 }
 
 // AcquireConfig unmarshalls alter.yaml and returns the representation as a Config
-func AcquireConfig(argMachine string) (*Config, error) {
-	// require that the config is named 'alter.yaml'
-	file := "machine.yaml"
+func AcquireConfig(machine string) (*Config, error) {
+	file := machine + ".yaml"
 
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -55,7 +54,7 @@ func AcquireConfig(argMachine string) (*Config, error) {
 		return nil, err
 	}
 
-	cfg, err := loadConfig(file, argMachine)
+	cfg, err := loadConfig(file, machine)
 	if err != nil {
 		return nil, err
 	}
