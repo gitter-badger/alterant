@@ -52,9 +52,8 @@ func main() {
 	}
 	app.Commands = []cli.Command{
 		{
-			Name:    "provision",
-			Aliases: []string{"p"},
-			Usage:   "provision a machine",
+			Name:  "provision",
+			Usage: "provision a machine",
 			Flags: []cli.Flag{
 				cli.BoolTFlag{
 					Name:  "links",
@@ -81,19 +80,13 @@ func main() {
 
 				requests := c.Args()
 
-				err = repo.OpenMachineByName(machine)
-				if err != nil {
-					log.Fatal(err)
-					os.Exit(1)
-				}
-
 				cfg, err := config.AcquireConfig(machine)
 				if err != nil {
 					log.Fatal(err)
 					os.Exit(1)
 				}
 
-				provisioner := provisioner.NewDefaultProvisioner(machine, cfg, c)
+				provisioner := provisioner.NewDefaultProvisioner(cfg, c)
 
 				err = provisioner.Provision(requests)
 				if err != nil {
@@ -103,17 +96,15 @@ func main() {
 			},
 		},
 		{
-			Name:    "prepare",
-			Aliases: []string{"e"},
-			Usage:   "prepare a machine for storage",
+			Name:  "prepare",
+			Usage: "prepare a machine for storage",
 			Action: func(c *cli.Context) {
 				log.Println("Not implemented")
 			},
 		},
 		{
-			Name:    "clean",
-			Aliases: []string{"c"},
-			Usage:   "clean provisioned links",
+			Name:  "clean",
+			Usage: "clean provisioned links",
 			Action: func(c *cli.Context) {
 				if len(c.Args()) == 0 {
 					cli.ShowCommandHelp(c, "clean")
@@ -127,7 +118,7 @@ func main() {
 					log.Fatal(err)
 				}
 
-				provisioner := provisioner.NewDefaultProvisioner(machine, cfg, c)
+				provisioner := provisioner.NewDefaultProvisioner(cfg, c)
 
 				err = provisioner.Clean()
 				if err != nil {
@@ -143,6 +134,8 @@ func main() {
 					cli.ShowSubcommandHelp(c)
 					os.Exit(1)
 				}
+
+				machine = c.Args().First()
 
 				err := repo.CreateMachine(machine)
 				if err != nil {
@@ -160,7 +153,9 @@ func main() {
 					os.Exit(1)
 				}
 
-				err := repo.OpenMachineByName(machine)
+				machine = c.Args().First()
+
+				err := repo.OpenMachine(machine)
 				if err != nil {
 					fmt.Println(err)
 					os.Exit(1)
@@ -184,13 +179,17 @@ func main() {
 			},
 		},
 		{
-			Name:    "encrypt",
-			Aliases: []string{"e"},
-			Usage:   "encrypt files",
+			Name:  "encrypt",
+			Usage: "encrypt files",
 			Flags: []cli.Flag{
 				cli.StringFlag{
-					Name:  "keyring",
-					Value: "$HOME/.gnupg/pubrin.gpg",
+					Name:  "private",
+					Value: "$HOME/.gnupg/secring.gpg",
+					Usage: "the pgp keyring used for encryption",
+				},
+				cli.StringFlag{
+					Name:  "public",
+					Value: "$HOME/.gnupg/pubring.gpg",
 					Usage: "the pgp keyring used for encryption",
 				},
 				cli.BoolFlag{
@@ -207,7 +206,7 @@ func main() {
 				logger := logWrapper.NewLogWrapper(c.GlobalBool("verbose"))
 
 				encrypter := encrypter.NewDefaultEncryption(c.GlobalString("password"),
-					c.String("keyring"), c.BoolT("remove"), logger)
+					c.String("private"), c.String("public"), c.BoolT("remove"), logger)
 
 				err = encrypter.EncryptFiles(cfg)
 				if err != nil {
@@ -216,14 +215,18 @@ func main() {
 			},
 		},
 		{
-			Name:    "decrypt",
-			Aliases: []string{"d"},
-			Usage:   "decrypt files",
+			Name:  "decrypt",
+			Usage: "decrypt files",
 			Flags: []cli.Flag{
 				cli.StringFlag{
-					Name:  "keyring",
-					Value: "$HOME/.gnupg/pubrin.gpg",
-					Usage: "the pgp keyring used for encryption",
+					Name:  "private",
+					Value: "$HOME/.gnupg/secring.gpg",
+					Usage: "the private key used for encryption",
+				},
+				cli.StringFlag{
+					Name:  "public",
+					Value: "$HOME/.gnupg/pubring.gpg",
+					Usage: "the public key used for encryption",
 				},
 				cli.BoolFlag{
 					Name:  "remove",
@@ -239,7 +242,7 @@ func main() {
 				logger := logWrapper.NewLogWrapper(c.GlobalBool("verbose"))
 
 				encrypter := encrypter.NewDefaultEncryption(c.GlobalString("password"),
-					c.String("keyring"), c.BoolT("remove"), logger)
+					c.String("private"), c.String("public"), c.BoolT("remove"), logger)
 
 				err = encrypter.DecryptFiles(cfg)
 				if err != nil {

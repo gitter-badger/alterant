@@ -21,10 +21,7 @@ func newConfig() *Config {
 	return &Config{}
 }
 
-func loadConfig(file string, machine string) (*Config, error) {
-	// required by the custom unmarshalling of SymlinkTarget and SymlinkDestination
-	os.Setenv("MACHINE", machine)
-
+func loadConfig(file string) (*Config, error) {
 	bytes, err := ioutil.ReadFile(file)
 	if err != nil {
 		return nil, err
@@ -36,8 +33,6 @@ func loadConfig(file string, machine string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	cfg.Machine = machine
 
 	return cfg, nil
 }
@@ -56,10 +51,15 @@ func AcquireConfig(machine string) (*Config, error) {
 		return nil, err
 	}
 
-	cfg, err := loadConfig(file, machine)
+	cfg, err := loadConfig(file)
 	if err != nil {
 		return nil, err
 	}
+
+	// required by the custom unmarshalling of SymlinkTarget and SymlinkDestination
+	os.Setenv("MACHINE", machine)
+
+	cfg.Machine = machine
 
 	return cfg, nil
 }

@@ -21,11 +21,17 @@ import (
 	"github.com/autonomy/alterant/logger"
 )
 
+const (
+	defaultPublicKey  = "pubring.gpg"
+	defaultPrivateKey = "secring.gpg"
+)
+
 // DefaultEncryption is a basic encryption method and is the default
 type DefaultEncryption struct {
 	logger   *logWrapper.LogWrapper
 	Password string
-	Keyring  string
+	Private  string
+	Public   string
 	Remove   bool
 }
 
@@ -92,19 +98,15 @@ func (de *DefaultEncryption) HashPassword(password string) (string, error) {
 }
 
 // NewDefaultEncryption returns an instance of `DefaultEncryption`
-func NewDefaultEncryption(password string, keyring string, remove bool, logger *logWrapper.LogWrapper) *DefaultEncryption {
+func NewDefaultEncryption(password string, private string, public string, remove bool, logger *logWrapper.LogWrapper) *DefaultEncryption {
 	return &DefaultEncryption{
 		logger:   logger,
 		Password: password,
-		Keyring:  keyring,
+		Private:  private,
+		Public:   public,
 		Remove:   remove,
 	}
 }
-
-const (
-	publicKey  = "pubring.gpg"
-	privateKey = "secring.gpg"
-)
 
 // NewKeyPair Creates a new RSA/RSA key pair with the provided identity details and signs the
 // public key with the private key
@@ -137,7 +139,7 @@ func NewKeyPair(name string, comment string, email string) error {
 }
 
 func savePublicKey(e *openpgp.Entity) error {
-	pubKey, err := os.Create(publicKey)
+	pubKey, err := os.Create(defaultPublicKey)
 	if err != nil {
 		return err
 	}
@@ -158,7 +160,7 @@ func savePublicKey(e *openpgp.Entity) error {
 }
 
 func savePrivateKey(e *openpgp.Entity, pgpCfg *packet.Config) error {
-	privKey, err := os.Create(privateKey)
+	privKey, err := os.Create(defaultPrivateKey)
 	if err != nil {
 		return err
 	}
@@ -183,7 +185,7 @@ func (de *DefaultEncryption) EncryptFiles(cfg *config.Config) error {
 	pgpCfg := newPGPConfig()
 
 	// open ascii armored public key
-	f, err := os.Open(de.Keyring)
+	f, err := os.Open(de.Public)
 	defer f.Close()
 	if err != nil {
 		return err
@@ -196,7 +198,7 @@ func (de *DefaultEncryption) EncryptFiles(cfg *config.Config) error {
 	}
 
 	// obtain a private key for signing
-	signEntity, err := signEntity()
+	signEntity, err := signEntity(de.Private)
 	if err != nil {
 		return err
 	}
@@ -249,7 +251,7 @@ func (de *DefaultEncryption) EncryptFiles(cfg *config.Config) error {
 // DecryptFiles decrypts a file
 func (de *DefaultEncryption) DecryptFiles(cfg *config.Config) error {
 	// open the private key file
-	privateKeyring, err := os.Open(de.Keyring)
+	privateKeyring, err := os.Open(de.Private)
 	defer privateKeyring.Close()
 	if err != nil {
 		return err
@@ -299,7 +301,7 @@ func (de *DefaultEncryption) DecryptFiles(cfg *config.Config) error {
 	return nil
 }
 
-func signEntity() (*openpgp.Entity, error) {
+func signEntity(privateKey string) (*openpgp.Entity, error) {
 	// open ascii armored private key
 	sign, err := os.Open(privateKey)
 	defer sign.Close()

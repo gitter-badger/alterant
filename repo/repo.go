@@ -11,15 +11,37 @@ import (
 
 const repoPath = "./"
 
-func initMachine() {
+func uncommittedChanges(repo *git.Repository) (bool, error) {
+	opts := &git.StatusOptions{}
+	opts.Flags = git.StatusOptIncludeUntracked
 
+	statusList, err := repo.StatusList(opts)
+	if err != nil {
+		return false, err
+	}
+
+	count, err := statusList.EntryCount()
+	if count > 0 {
+		return true, nil
+	}
+
+	return false, nil
 }
 
-// OpenMachineByName checkouts the branch holding the machines machine.yaml
-func OpenMachineByName(machine string) error {
+// OpenMachine checkouts the branch holding the machines machine.yaml
+func OpenMachine(machine string) error {
 	repo, err := git.OpenRepository(repoPath)
 	if err != nil {
 		return err
+	}
+
+	ok, err := uncommittedChanges(repo)
+	if err != nil {
+		return err
+	}
+
+	if ok {
+		return fmt.Errorf("Cannot open %s, there are uncommitted changes", machine)
 	}
 
 	// change HEAD ref to point to the machine's branch
@@ -47,6 +69,15 @@ func CreateMachine(machine string) error {
 	repo, err := git.OpenRepository(repoPath)
 	if err != nil {
 		return err
+	}
+
+	ok, err := uncommittedChanges(repo)
+	if err != nil {
+		return err
+	}
+
+	if ok {
+		return fmt.Errorf("Cannot create %s, there are uncommitted changes", machine)
 	}
 
 	// crate a bare branch as outlined here: https://people.debian.org/~mika/forensics/git.html#branch
@@ -132,9 +163,7 @@ func ListMachines() error {
 			return err
 		}
 
-		if name != "master" && name != "common" {
-			fmt.Println("Machine: ", name)
-		}
+		fmt.Println(name)
 
 		return nil
 	}
@@ -144,6 +173,7 @@ func ListMachines() error {
 	return nil
 }
 
+// CurrentMachine returns the current branch
 func CurrentMachine() (machine string, err error) {
 	repo, err := git.OpenRepository(repoPath)
 	if err != nil {

@@ -18,12 +18,11 @@ type DefaultProvisioner struct {
 	Linker      linker.Linker
 	Commander   commander.Commander
 	Cfg         *config.Config
-	Machine     string
 }
 
 // Provision provisions a machine
 func (p *DefaultProvisioner) Provision(requests []string) error {
-	p.Logger.Info("Provisioning: %s", p.Machine)
+	p.Logger.Info("Provisioning: %s", p.Cfg.Machine)
 
 	// iterate over the request array to preserve the order of tasks
 	for _, request := range requests {
@@ -52,14 +51,14 @@ func (p *DefaultProvisioner) Provision(requests []string) error {
 		p.Logger.Info("Request fulfilled: %s", request)
 	}
 
-	p.Logger.Info("Provisioned: %s", p.Machine)
+	p.Logger.Info("Provisioned: %s", p.Cfg.Machine)
 
 	return nil
 }
 
 // Clean removes provisioned links
 func (p *DefaultProvisioner) Clean() error {
-	p.Logger.Info("Cleaning: %s", p.Machine)
+	p.Logger.Info("Cleaning: %s", p.Cfg.Machine)
 	// for _, task := range p.Cfg.Tasks {
 	// 	p.Linker.RemoveLinks(task.Links)
 	// }
@@ -68,19 +67,18 @@ func (p *DefaultProvisioner) Clean() error {
 }
 
 // NewDefaultProvisioner returns and instance of a `DefaultProvisioner`
-func NewDefaultProvisioner(machine string, cfg *config.Config, c *cli.Context) *DefaultProvisioner {
+func NewDefaultProvisioner(cfg *config.Config, c *cli.Context) *DefaultProvisioner {
 	logger := logWrapper.NewLogWrapper(c.GlobalBool("verbose"))
 
 	p := &DefaultProvisioner{
 		Logger:      logger,
-		Environment: environment.NewEnvironment(machine, logger),
+		Environment: environment.NewEnvironment(cfg.Machine, logger),
 		Encrypter: encrypter.NewDefaultEncryption(c.GlobalString("password"),
-			c.String("keyring"), c.BoolT("remove"), logger),
+			c.String("public"), c.String("private"), c.BoolT("remove"), logger),
 		Linker: linker.NewDefaultLinker(c.BoolT("links"), c.Bool("parents"),
 			c.Bool("clobber"), logger),
 		Commander: commander.NewDefaultCommander(c.BoolT("commands"), logger),
 		Cfg:       cfg,
-		Machine:   machine,
 	}
 
 	return p
