@@ -12,6 +12,7 @@ import (
 
 // Config represents `machine.yaml`
 type Config struct {
+	Order       []string              `yaml:"order"`
 	Environment map[string]string     `yaml:"environment"`
 	Tasks       map[string]*task.Task `yaml:"tasks"`
 	Machine     string

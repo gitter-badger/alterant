@@ -45,6 +45,16 @@ func main() {
 			Value: "",
 			Usage: "password to encrypt/decrypt a file",
 		},
+		cli.StringFlag{
+			Name:  "private",
+			Value: os.Getenv("HOME") + "/.alterant/secring.gpg",
+			Usage: "the private key used for encryption",
+		},
+		cli.StringFlag{
+			Name:  "public",
+			Value: os.Getenv("HOME") + "/.alterant/pubring.gpg",
+			Usage: "the public key used for encryption",
+		},
 		cli.BoolFlag{
 			Name:  "verbose",
 			Usage: "use verbose logging",
@@ -73,17 +83,17 @@ func main() {
 				},
 			},
 			Action: func(c *cli.Context) {
-				if len(c.Args()) == 0 {
-					cli.ShowCommandHelp(c, "provision")
-					os.Exit(1)
-				}
-
-				requests := c.Args()
-
 				cfg, err := config.AcquireConfig(machine)
 				if err != nil {
 					log.Fatal(err)
 					os.Exit(1)
+				}
+
+				var requests []string
+				if len(c.Args()) == 0 {
+					requests = cfg.Order
+				} else {
+					requests = c.Args()
 				}
 
 				provisioner := provisioner.NewDefaultProvisioner(cfg, c)
@@ -182,16 +192,6 @@ func main() {
 			Name:  "encrypt",
 			Usage: "encrypt files",
 			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:  "private",
-					Value: "$HOME/.gnupg/secring.gpg",
-					Usage: "the pgp keyring used for encryption",
-				},
-				cli.StringFlag{
-					Name:  "public",
-					Value: "$HOME/.gnupg/pubring.gpg",
-					Usage: "the pgp keyring used for encryption",
-				},
 				cli.BoolFlag{
 					Name:  "remove",
 					Usage: "remove original files, defaults to false",
@@ -206,7 +206,7 @@ func main() {
 				logger := logWrapper.NewLogWrapper(c.GlobalBool("verbose"))
 
 				encrypter := encrypter.NewDefaultEncryption(c.GlobalString("password"),
-					c.String("private"), c.String("public"), c.BoolT("remove"), logger)
+					c.GlobalString("private"), c.GlobalString("public"), c.BoolT("remove"), logger)
 
 				err = encrypter.EncryptFiles(cfg)
 				if err != nil {
@@ -218,19 +218,9 @@ func main() {
 			Name:  "decrypt",
 			Usage: "decrypt files",
 			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:  "private",
-					Value: "$HOME/.gnupg/secring.gpg",
-					Usage: "the private key used for encryption",
-				},
-				cli.StringFlag{
-					Name:  "public",
-					Value: "$HOME/.gnupg/pubring.gpg",
-					Usage: "the public key used for encryption",
-				},
 				cli.BoolFlag{
 					Name:  "remove",
-					Usage: "remove encrypted files, defaults to false",
+					Usage: "remove decrypted files, defaults to false",
 				},
 			},
 			Action: func(c *cli.Context) {
@@ -242,7 +232,7 @@ func main() {
 				logger := logWrapper.NewLogWrapper(c.GlobalBool("verbose"))
 
 				encrypter := encrypter.NewDefaultEncryption(c.GlobalString("password"),
-					c.String("private"), c.String("public"), c.BoolT("remove"), logger)
+					c.GlobalString("private"), c.GlobalString("public"), c.BoolT("remove"), logger)
 
 				err = encrypter.DecryptFiles(cfg)
 				if err != nil {

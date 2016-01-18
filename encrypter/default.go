@@ -386,6 +386,8 @@ func newPGPConfig() *packet.Config {
 
 // NewDefaultEncryption returns an instance of `DefaultEncryption`
 func NewDefaultEncryption(password string, private string, public string, remove bool, logger *logWrapper.LogWrapper) *DefaultEncryption {
+fmt.Println(private)
+fmt.Println(public)
 	return &DefaultEncryption{
 		logger:   logger,
 		Password: password,

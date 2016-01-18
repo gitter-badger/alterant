@@ -24,6 +24,12 @@ type DefaultProvisioner struct {
 func (p *DefaultProvisioner) Provision(requests []string) error {
 	p.Logger.Info("Provisioning: %s", p.Cfg.Machine)
 
+	// decrypt files
+	err := p.Encrypter.DecryptFiles(p.Cfg)
+	if err != nil {
+		return err
+	}
+
 	// iterate over the request array to preserve the order of tasks
 	for _, request := range requests {
 		task := p.Cfg.Tasks[request]
@@ -37,7 +43,7 @@ func (p *DefaultProvisioner) Provision(requests []string) error {
 		p.Environment.Set(p.Cfg.Environment)
 
 		// create the links specified in the task
-		err := p.Linker.CreateLinks(task.Links)
+		err = p.Linker.CreateLinks(task.Links)
 		if err != nil {
 			return err
 		}
@@ -74,7 +80,7 @@ func NewDefaultProvisioner(cfg *config.Config, c *cli.Context) *DefaultProvision
 		Logger:      logger,
 		Environment: environment.NewEnvironment(cfg.Machine, logger),
 		Encrypter: encrypter.NewDefaultEncryption(c.GlobalString("password"),
-			c.String("public"), c.String("private"), c.BoolT("remove"), logger),
+			c.GlobalString("private"), c.GlobalString("public"), c.BoolT("remove"), logger),
 		Linker: linker.NewDefaultLinker(c.BoolT("links"), c.Bool("parents"),
 			c.Bool("clobber"), logger),
 		Commander: commander.NewDefaultCommander(c.BoolT("commands"), logger),

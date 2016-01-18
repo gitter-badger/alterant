@@ -5,13 +5,13 @@ package linker
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"path"
 
 	"github.com/autonomy/alterant/logger"
 )
 
+// Link represents a link in the machine yaml
 type Link struct {
 	Target      SymlinkTarget      `yaml:"target"`
 	Destination SymlinkDestination `yaml:"destination"`
@@ -115,10 +115,6 @@ func (dl *DefaultLinker) CreateLinks(links []Link) error {
 	}
 
 	for _, link := range links {
-		if link.Encrypted {
-			fmt.Println("YES")
-		}
-
 		if dl.parents {
 			err := dl.createParents(string(link.Destination))
 			if err != nil {
