@@ -22,11 +22,11 @@ import (
 )
 
 const (
-	defaultPublicKey  = "pubring.gpg"
-	defaultPrivateKey = "secring.gpg"
+	defaultPublicKeyOutput  = "pubring.gpg"
+	defaultPrivateKeyOutput = "secring.gpg"
 )
 
-// DefaultEncryption is a basic encryption method and is the default
+// DefaultEncryption is a basic encryption handler and is the default
 type DefaultEncryption struct {
 	logger   *logWrapper.LogWrapper
 	Password string
@@ -97,15 +97,46 @@ func (de *DefaultEncryption) HashPassword(password string) (string, error) {
 	return key, nil
 }
 
-// NewDefaultEncryption returns an instance of `DefaultEncryption`
-func NewDefaultEncryption(password string, private string, public string, remove bool, logger *logWrapper.LogWrapper) *DefaultEncryption {
-	return &DefaultEncryption{
-		logger:   logger,
-		Password: password,
-		Private:  private,
-		Public:   public,
-		Remove:   remove,
+func savePublicKey(e *openpgp.Entity) error {
+	pubKey, err := os.Create(defaultPublicKeyOutput)
+	if err != nil {
+		return err
 	}
+
+	w, err := armor.Encode(pubKey, openpgp.PublicKeyType, nil)
+	if err != nil {
+		return err
+	}
+
+	err = e.Serialize(w)
+	if err != nil {
+		return err
+	}
+
+	w.Close()
+
+	return nil
+}
+
+func savePrivateKey(e *openpgp.Entity, pgpCfg *packet.Config) error {
+	privKey, err := os.Create(defaultPrivateKeyOutput)
+	if err != nil {
+		return err
+	}
+
+	w, err := armor.Encode(privKey, openpgp.PrivateKeyType, nil)
+	if err != nil {
+		return err
+	}
+
+	err = e.SerializePrivate(w, pgpCfg)
+	if err != nil {
+		return err
+	}
+
+	w.Close()
+
+	return nil
 }
 
 // NewKeyPair Creates a new RSA/RSA key pair with the provided identity details and signs the
@@ -138,170 +169,7 @@ func NewKeyPair(name string, comment string, email string) error {
 	return nil
 }
 
-func savePublicKey(e *openpgp.Entity) error {
-	pubKey, err := os.Create(defaultPublicKey)
-	if err != nil {
-		return err
-	}
-
-	w, err := armor.Encode(pubKey, openpgp.PublicKeyType, nil)
-	if err != nil {
-		return err
-	}
-
-	err = e.Serialize(w)
-	if err != nil {
-		return err
-	}
-
-	w.Close()
-
-	return nil
-}
-
-func savePrivateKey(e *openpgp.Entity, pgpCfg *packet.Config) error {
-	privKey, err := os.Create(defaultPrivateKey)
-	if err != nil {
-		return err
-	}
-
-	w, err := armor.Encode(privKey, openpgp.PrivateKeyType, nil)
-	if err != nil {
-		return err
-	}
-
-	err = e.SerializePrivate(w, pgpCfg)
-	if err != nil {
-		return err
-	}
-
-	w.Close()
-
-	return nil
-}
-
-// EncryptFiles encrypts a file
-func (de *DefaultEncryption) EncryptFiles(cfg *config.Config) error {
-	pgpCfg := newPGPConfig()
-
-	// open ascii armored public key
-	f, err := os.Open(de.Public)
-	defer f.Close()
-	if err != nil {
-		return err
-	}
-
-	// retrieve the entities in the keyring
-	entityList, err := openpgp.ReadArmoredKeyRing(f)
-	if err != nil {
-		return err
-	}
-
-	// obtain a private key for signing
-	signEntity, err := signEntity(de.Private)
-	if err != nil {
-		return err
-	}
-
-	ciphertext := new(bytes.Buffer)
-
-	// create the encryption writer
-	w, err := openpgp.Encrypt(ciphertext, entityList, signEntity, nil, pgpCfg)
-	if err != nil {
-		return err
-	}
-
-	for _, task := range cfg.Tasks {
-		for _, link := range task.Links {
-			if link.Encrypted {
-				file := string(link.Target)
-
-				// read the file inteded for encryption into a buffer
-				data, err := ioutil.ReadFile(file)
-
-				// encrypt the data
-				_, err = w.Write(data)
-				if err != nil {
-					return err
-				}
-
-				err = w.Close()
-				if err != nil {
-					return err
-				}
-
-				// encode to base64
-				bytes, err := ioutil.ReadAll(ciphertext)
-				if err != nil {
-					return err
-				}
-
-				// encode the encypted data as a base64 string
-				encoded := base64.StdEncoding.EncodeToString(bytes)
-
-				// write the encoded/encypted data to disk
-				ioutil.WriteFile(file+".encrypted", []byte(encoded), 0666)
-			}
-		}
-	}
-
-	return nil
-}
-
-// DecryptFiles decrypts a file
-func (de *DefaultEncryption) DecryptFiles(cfg *config.Config) error {
-	// open the private key file
-	privateKeyring, err := os.Open(de.Private)
-	defer privateKeyring.Close()
-	if err != nil {
-		return err
-	}
-
-	// retrieve the entities in the keyring
-	entityList, err := openpgp.ReadArmoredKeyRing(privateKeyring)
-	if err != nil {
-		return err
-	}
-
-	for _, task := range cfg.Tasks {
-		for _, link := range task.Links {
-			if link.Encrypted {
-				file := string(link.Target + ".encrypted")
-
-				// read the file inteded for decryption into a buffer
-				data, err := ioutil.ReadFile(file)
-
-				// decode the base64 encypted data
-				decoded, err := base64.StdEncoding.DecodeString(string(data))
-				if err != nil {
-					return err
-				}
-
-				// decrypt the data
-				md, err := openpgp.ReadMessage(bytes.NewBuffer(decoded), entityList, nil, nil)
-				if err != nil {
-					return err
-				}
-
-				bytes, err := ioutil.ReadAll(md.UnverifiedBody)
-				if err != nil {
-					return err
-				}
-
-				// encode the encypted data as a base64 string
-				plaintext := string(bytes)
-
-				// write the decoded/decypted data to disk
-				file = strings.TrimSuffix(file, filepath.Ext(file))
-				ioutil.WriteFile(file, []byte(plaintext), 0666)
-			}
-		}
-	}
-
-	return nil
-}
-
-func signEntity(privateKey string) (*openpgp.Entity, error) {
+func signedEntity(privateKey string) (*openpgp.Entity, error) {
 	// open ascii armored private key
 	sign, err := os.Open(privateKey)
 	defer sign.Close()
@@ -321,12 +189,189 @@ func signEntity(privateKey string) (*openpgp.Entity, error) {
 
 	// parse and decrypt decoded key
 	signReader := packet.NewReader(signBlock.Body)
-	signEntity, err := openpgp.ReadEntity(signReader)
+	signed, err := openpgp.ReadEntity(signReader)
 	if err != nil {
 		return nil, err
 	}
 
-	return signEntity, nil
+	return signed, nil
+}
+
+func encryptFile(file string, to *openpgp.EntityList, signed *openpgp.Entity, pgpCfg *packet.Config) error {
+	// read the file inteded for encryption into a buffer
+	content, err := readFromFile(file)
+	if err != nil {
+		return err
+	}
+
+	ciphertext := new(bytes.Buffer)
+
+	// create the encryption writer
+	w, err := openpgp.Encrypt(ciphertext, *to, signed, nil, pgpCfg)
+	if err != nil {
+		return err
+	}
+
+	// encrypt the data
+	_, err = w.Write(content)
+	if err != nil {
+		return err
+	}
+
+	err = w.Close()
+	if err != nil {
+		return err
+	}
+
+	bytes, err := ioutil.ReadAll(ciphertext)
+	if err != nil {
+		return err
+	}
+
+	// encode the encypted data as a base64 string
+	encoded := base64.StdEncoding.EncodeToString(bytes)
+
+	// write the encoded/encypted data to disk
+	writeToFile(encoded, file+".encrypted")
+
+	return nil
+}
+
+// EncryptFiles encrypts a file
+func (de *DefaultEncryption) EncryptFiles(cfg *config.Config) error {
+	pgpCfg := newPGPConfig()
+
+	// open ascii armored public key
+	f, err := os.Open(de.Public)
+	defer f.Close()
+	if err != nil {
+		return err
+	}
+
+	// retrieve the entities in the keyring
+	to, err := openpgp.ReadArmoredKeyRing(f)
+	if err != nil {
+		return err
+	}
+
+	// obtain a private key for signing
+	signed, err := signedEntity(de.Private)
+	if err != nil {
+		return err
+	}
+
+	for _, task := range cfg.Tasks {
+		for _, link := range task.Links {
+			file := string(link.Target)
+			encrypted := link.Encrypted
+
+			if encrypted {
+				exists, err := isFile(file)
+				if !exists {
+					return err
+				}
+
+				de.logger.Info("Encrypting: %s", file)
+				err = encryptFile(file, &to, signed, pgpCfg)
+				if err != nil {
+					return err
+				}
+
+				if de.Remove {
+					de.logger.Info("Removing: %s", file)
+					err = os.Remove(file)
+					if err != nil {
+						return err
+					}
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+func decryptFile(file string, to *openpgp.EntityList, pgpCfg *packet.Config) error {
+	// read the file inteded for decryption into a buffer
+	content, err := readFromFile(file)
+	if err != nil {
+		return err
+	}
+
+	// decode the base64 encypted data
+	decoded, err := base64.StdEncoding.DecodeString(string(content))
+	if err != nil {
+		return err
+	}
+
+	// decrypt the data
+	md, err := openpgp.ReadMessage(bytes.NewBuffer(decoded), to, nil, pgpCfg)
+	if err != nil {
+		return err
+	}
+
+	bytes, err := ioutil.ReadAll(md.UnverifiedBody)
+	if err != nil {
+		return err
+	}
+
+	plaintext := string(bytes)
+
+	// write the decoded/decypted data to disk
+	file = strings.TrimSuffix(file, filepath.Ext(file))
+
+	writeToFile(plaintext, file)
+
+	return nil
+}
+
+// DecryptFiles decrypts a file
+func (de *DefaultEncryption) DecryptFiles(cfg *config.Config) error {
+	pgpCfg := newPGPConfig()
+
+	// open the private key file
+	privateKeyring, err := os.Open(de.Private)
+	defer privateKeyring.Close()
+	if err != nil {
+		return err
+	}
+
+	// retrieve the entities in the keyring
+	to, err := openpgp.ReadArmoredKeyRing(privateKeyring)
+	if err != nil {
+		return err
+	}
+
+	for _, task := range cfg.Tasks {
+		for _, link := range task.Links {
+			file := string(link.Target)
+			encrypted := link.Encrypted
+
+			if encrypted {
+				file := file + ".encrypted"
+				exists, err := isFile(file)
+				if !exists {
+					return err
+				}
+
+				de.logger.Info("Decrypting: %s", file)
+				err = decryptFile(file, &to, pgpCfg)
+				if err != nil {
+					return err
+				}
+
+				if de.Remove {
+					de.logger.Info("Removing: %s", file)
+					err = os.Remove(file)
+					if err != nil {
+						return err
+					}
+				}
+			}
+		}
+	}
+
+	return nil
 }
 
 func newPGPConfig() *packet.Config {
@@ -337,4 +382,15 @@ func newPGPConfig() *packet.Config {
 	}
 
 	return pgpCfg
+}
+
+// NewDefaultEncryption returns an instance of `DefaultEncryption`
+func NewDefaultEncryption(password string, private string, public string, remove bool, logger *logWrapper.LogWrapper) *DefaultEncryption {
+	return &DefaultEncryption{
+		logger:   logger,
+		Password: password,
+		Private:  private,
+		Public:   public,
+		Remove:   remove,
+	}
 }
