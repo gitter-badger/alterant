@@ -14,7 +14,7 @@ import (
 type Config struct {
 	Environment map[string]string     `yaml:"environment"`
 	Tasks       map[string]*task.Task `yaml:"tasks"`
-	Encrypted   []string              `yaml:"encrypted"`
+	Machine     string
 }
 
 func newConfig() *Config {
@@ -36,6 +36,8 @@ func loadConfig(file string, machine string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	cfg.Machine = machine
 
 	return cfg, nil
 }

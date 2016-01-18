@@ -28,7 +28,11 @@ import (
 var version string
 
 func main() {
-	var ignoreArgCheck bool
+	machine, err := repo.CurrentMachine()
+	if err != nil {
+		log.Fatal(err)
+		os.Exit(1)
+	}
 
 	app := cli.NewApp()
 
@@ -75,17 +79,6 @@ func main() {
 					os.Exit(1)
 				}
 
-				// decrypt files before provisioning
-				ignoreArgCheck = true
-				// cmd := app.Command("decrypt")
-				// cmd.Run(c)
-
-				machine, err := repo.CurrentMachine()
-				if err != nil {
-					log.Fatal(err)
-					os.Exit(1)
-				}
-
 				requests := c.Args()
 
 				err = repo.OpenMachineByName(machine)
@@ -110,6 +103,14 @@ func main() {
 			},
 		},
 		{
+			Name:    "prepare",
+			Aliases: []string{"e"},
+			Usage:   "prepare a machine for storage",
+			Action: func(c *cli.Context) {
+				log.Println("Not implemented")
+			},
+		},
+		{
 			Name:    "clean",
 			Aliases: []string{"c"},
 			Usage:   "clean provisioned links",
@@ -119,56 +120,98 @@ func main() {
 					os.Exit(1)
 				}
 
-				// machine := c.Args().First()
 				// requests := c.Args().Tail()
-				//
-				// cfg, err := config.AcquireConfig(machine)
-				// if err != nil {
-				// 	log.Fatal(err)
-				// }
-				//
-				// provisioner := provisioner.NewDefaultProvisioner(machine, cfg, c)
-				//
-				// err = provisioner.Clean()
-				// if err != nil {
-				// 	log.Fatal(err)
-				// }
+
+				cfg, err := config.AcquireConfig(machine)
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				provisioner := provisioner.NewDefaultProvisioner(machine, cfg, c)
+
+				err = provisioner.Clean()
+				if err != nil {
+					log.Fatal(err)
+				}
 			},
 		},
+		{
+			Name:  "new",
+			Usage: "create a new machine",
+			Action: func(c *cli.Context) {
+				if len(c.Args()) != 1 {
+					cli.ShowSubcommandHelp(c)
+					os.Exit(1)
+				}
 
+				err := repo.CreateMachine(machine)
+				if err != nil {
+					fmt.Println(err)
+					os.Exit(1)
+				}
+			},
+		},
+		{
+			Name:  "open",
+			Usage: "open an existing machine",
+			Action: func(c *cli.Context) {
+				if len(c.Args()) != 1 {
+					cli.ShowSubcommandHelp(c)
+					os.Exit(1)
+				}
+
+				err := repo.OpenMachineByName(machine)
+				if err != nil {
+					fmt.Println(err)
+					os.Exit(1)
+				}
+			},
+		},
+		{
+			Name:  "list",
+			Usage: "list available machines",
+			Action: func(c *cli.Context) {
+				if len(c.Args()) != 0 {
+					cli.ShowSubcommandHelp(c)
+					os.Exit(1)
+				}
+
+				err := repo.ListMachines()
+				if err != nil {
+					fmt.Println(err)
+					os.Exit(1)
+				}
+			},
+		},
 		{
 			Name:    "encrypt",
 			Aliases: []string{"e"},
 			Usage:   "encrypt files",
 			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "keyring",
+					Value: "$HOME/.gnupg/pubrin.gpg",
+					Usage: "the pgp keyring used for encryption",
+				},
 				cli.BoolFlag{
 					Name:  "remove",
 					Usage: "remove original files, defaults to false",
 				},
 			},
 			Action: func(c *cli.Context) {
-				if len(c.Args()) > 0 {
-					cli.ShowCommandHelp(c, "encrypt")
-					os.Exit(1)
-				}
-
-				cfg, err := config.AcquireConfig("")
+				cfg, err := config.AcquireConfig(machine)
 				if err != nil {
 					log.Fatal(err)
 				}
 
 				logger := logWrapper.NewLogWrapper(c.GlobalBool("verbose"))
 
-				if len(cfg.Encrypted) > 0 {
-					encrypter := encrypter.NewDefaultEncryption(c.GlobalString("password"),
-						c.BoolT("remove"), logger)
+				encrypter := encrypter.NewDefaultEncryption(c.GlobalString("password"),
+					c.String("keyring"), c.BoolT("remove"), logger)
 
-					err = encrypter.EncryptFiles(cfg.Encrypted)
-					if err != nil {
-						log.Fatal(err)
-					}
-				} else {
-					log.Println("No encrypted files are specified in alter.yaml")
+				err = encrypter.EncryptFiles(cfg)
+				if err != nil {
+					log.Fatal(err)
 				}
 			},
 		},
@@ -177,94 +220,51 @@ func main() {
 			Aliases: []string{"d"},
 			Usage:   "decrypt files",
 			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "keyring",
+					Value: "$HOME/.gnupg/pubrin.gpg",
+					Usage: "the pgp keyring used for encryption",
+				},
 				cli.BoolFlag{
 					Name:  "remove",
 					Usage: "remove encrypted files, defaults to false",
 				},
 			},
 			Action: func(c *cli.Context) {
-				if !ignoreArgCheck {
-					if len(c.Args()) > 0 {
-						cli.ShowCommandHelp(c, "decrypt")
-						os.Exit(1)
-					}
-				}
-
-				cfg, err := config.AcquireConfig("")
+				cfg, err := config.AcquireConfig(machine)
 				if err != nil {
 					log.Fatal(err)
 				}
 
 				logger := logWrapper.NewLogWrapper(c.GlobalBool("verbose"))
 
-				if len(cfg.Encrypted) > 0 {
-					encrypter := encrypter.NewDefaultEncryption(c.GlobalString("password"),
-						c.BoolT("remove"), logger)
+				encrypter := encrypter.NewDefaultEncryption(c.GlobalString("password"),
+					c.String("keyring"), c.BoolT("remove"), logger)
 
-					err = encrypter.DecryptFiles(cfg.Encrypted)
-					if err != nil {
-						log.Fatal(err)
-					}
-				} else {
-					log.Println("No encrypted files are specified in alter.yaml")
+				err = encrypter.DecryptFiles(cfg)
+				if err != nil {
+					log.Fatal(err)
 				}
 			},
 		},
 		{
-			Name:    "machine",
-			Aliases: []string{"m"},
-			Usage:   "manage a machine",
-			Subcommands: []cli.Command{
-				{
-					Name:  "new",
-					Usage: "create a new machine",
-					Action: func(c *cli.Context) {
-						if len(c.Args()) != 1 {
-							cli.ShowSubcommandHelp(c)
-							os.Exit(1)
-						}
-						machine := c.Args().First()
+			Name:  "gen-key",
+			Usage: "generate a private/public key pair",
+			Action: func(c *cli.Context) {
+				if len(c.Args()) != 3 {
+					cli.ShowCommandHelp(c, "gen-key")
+					os.Exit(1)
+				}
 
-						err := repo.CreateMachine(machine)
-						if err != nil {
-							fmt.Println(err)
-							os.Exit(1)
-						}
-					},
-				},
-				{
-					Name:  "open",
-					Usage: "open an existing machine",
-					Action: func(c *cli.Context) {
-						if len(c.Args()) != 1 {
-							cli.ShowSubcommandHelp(c)
-							os.Exit(1)
-						}
-						machine := c.Args().First()
+				name := c.Args()[0]
+				comment := c.Args()[1]
+				email := c.Args()[2]
 
-						err := repo.OpenMachineByName(machine)
-						if err != nil {
-							fmt.Println(err)
-							os.Exit(1)
-						}
-					},
-				},
-				{
-					Name:  "list",
-					Usage: "list available machines",
-					Action: func(c *cli.Context) {
-						if len(c.Args()) != 0 {
-							cli.ShowSubcommandHelp(c)
-							os.Exit(1)
-						}
-
-						err := repo.ListMachines()
-						if err != nil {
-							fmt.Println(err)
-							os.Exit(1)
-						}
-					},
-				},
+				err := encrypter.NewKeyPair(name, comment, email)
+				if err != nil {
+					log.Println(err)
+					os.Exit(1)
+				}
 			},
 		},
 	}

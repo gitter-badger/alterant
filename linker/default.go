@@ -5,6 +5,7 @@ package linker
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path"
 
@@ -114,6 +115,9 @@ func (dl *DefaultLinker) CreateLinks(links []Link) error {
 	}
 
 	for _, link := range links {
+		if link.Encrypted {
+			fmt.Println("YES")
+		}
 
 		if dl.parents {
 			err := dl.createParents(string(link.Destination))

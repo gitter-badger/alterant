@@ -75,7 +75,7 @@ func NewDefaultProvisioner(machine string, cfg *config.Config, c *cli.Context) *
 		Logger:      logger,
 		Environment: environment.NewEnvironment(machine, logger),
 		Encrypter: encrypter.NewDefaultEncryption(c.GlobalString("password"),
-			c.BoolT("remove"), logger),
+			c.String("keyring"), c.BoolT("remove"), logger),
 		Linker: linker.NewDefaultLinker(c.BoolT("links"), c.Bool("parents"),
 			c.Bool("clobber"), logger),
 		Commander: commander.NewDefaultCommander(c.BoolT("commands"), logger),
