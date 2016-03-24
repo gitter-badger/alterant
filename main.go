@@ -2,20 +2,18 @@ package main
 
 // TODO: create a `prepare` command that deletes any decrypted files
 // TODO: DRY the common app command code
-// TODO: add an option to specify which branch the repo should be on
 // TODO: files that are encrypted should not be decrypted unless rquired by a task
 // TODO: add a `require` field to ensure task dependencies are fulfilled
-// TODO: add encryption groups that can be encrypted with different passwords
+// TODO: add encryption groups that can be encrypted with different passwords/keys
 // TODO: add `update` command that cleans the current environment, pulls the
 // updated repo and reprovisions the machine
-// TODO: add a `update_strategy` section to the config that can indicate options
+// TODO: add an `update_strategy` section to the config that can indicate options
 // for updating
-// TODO: add the option to use an alter.yaml from a git repo.
 
 import (
-	"fmt"
 	"log"
 	"os"
+	"path"
 
 	"github.com/autonomy/alterant/config"
 	"github.com/autonomy/alterant/encrypter"
@@ -28,10 +26,12 @@ import (
 var version string
 
 func main() {
-	machine, err := repo.CurrentMachine()
-	if err != nil {
-		log.Fatal(err)
-		os.Exit(1)
+	alterantDir := os.Getenv("HOME") + "/.alterant"
+
+	if _, err := os.Stat(alterantDir); os.IsNotExist(err) {
+		if err := os.MkdirAll(alterantDir, 0700); err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	app := cli.NewApp()
@@ -48,12 +48,12 @@ func main() {
 		cli.StringFlag{
 			Name:  "private",
 			Value: os.Getenv("HOME") + "/.alterant/secring.gpg",
-			Usage: "the private key used for encryption",
+			Usage: "openpgp ASCII armored private key",
 		},
 		cli.StringFlag{
 			Name:  "public",
 			Value: os.Getenv("HOME") + "/.alterant/pubring.gpg",
-			Usage: "the public key used for encryption",
+			Usage: "openpgp ASCII armored public key",
 		},
 		cli.BoolFlag{
 			Name:  "verbose",
@@ -83,10 +83,66 @@ func main() {
 				},
 			},
 			Action: func(c *cli.Context) {
+				if len(c.Args()) < 2 {
+					cli.ShowSubcommandHelp(c)
+					os.Exit(1)
+				}
+
+				url := c.Args()[0]
+				requestedMachine := c.Args()[1]
+
+				err := repo.CloneToAlterantDir(url, requestedMachine, alterantDir)
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				err = os.Chdir(path.Join(alterantDir, requestedMachine))
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				// machine, err := repo.CurrentMachine()
+				// if err != nil {
+				// 	log.Fatal(err)
+				// }
+
+				cfg, err := config.AcquireConfig(requestedMachine)
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				var requests []string
+				if len(c.Args()) > 2 {
+					requests = c.Args()[2:]
+				} else {
+					requests = cfg.Order
+				}
+
+				provisioner := provisioner.NewDefaultProvisioner(cfg, c)
+
+				err = provisioner.Provision(requests)
+				if err != nil {
+					log.Fatal(err)
+				}
+			},
+		},
+		{
+			Name:  "remove",
+			Usage: "remove provisioned tasks",
+			Action: func(c *cli.Context) {
+				if len(c.Args()) == 0 {
+					cli.ShowCommandHelp(c, "remove")
+					os.Exit(1)
+				}
+
+				machine, err := repo.CurrentMachine()
+				if err != nil {
+					log.Fatal(err)
+				}
+
 				cfg, err := config.AcquireConfig(machine)
 				if err != nil {
 					log.Fatal(err)
-					os.Exit(1)
 				}
 
 				var requests []string
@@ -98,39 +154,7 @@ func main() {
 
 				provisioner := provisioner.NewDefaultProvisioner(cfg, c)
 
-				err = provisioner.Provision(requests)
-				if err != nil {
-					log.Fatal(err)
-					os.Exit(1)
-				}
-			},
-		},
-		{
-			Name:  "prepare",
-			Usage: "prepare a machine for storage",
-			Action: func(c *cli.Context) {
-				log.Println("Not implemented")
-			},
-		},
-		{
-			Name:  "clean",
-			Usage: "clean provisioned links",
-			Action: func(c *cli.Context) {
-				if len(c.Args()) == 0 {
-					cli.ShowCommandHelp(c, "clean")
-					os.Exit(1)
-				}
-
-				// requests := c.Args().Tail()
-
-				cfg, err := config.AcquireConfig(machine)
-				if err != nil {
-					log.Fatal(err)
-				}
-
-				provisioner := provisioner.NewDefaultProvisioner(cfg, c)
-
-				err = provisioner.Clean()
+				err = provisioner.Remove(requests)
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -145,12 +169,11 @@ func main() {
 					os.Exit(1)
 				}
 
-				machine = c.Args().First()
+				machine := c.Args().First()
 
 				err := repo.CreateMachine(machine)
 				if err != nil {
-					fmt.Println(err)
-					os.Exit(1)
+					log.Fatal(err)
 				}
 			},
 		},
@@ -163,12 +186,11 @@ func main() {
 					os.Exit(1)
 				}
 
-				machine = c.Args().First()
+				machine := c.Args().First()
 
 				err := repo.OpenMachine(machine)
 				if err != nil {
-					fmt.Println(err)
-					os.Exit(1)
+					log.Fatal(err)
 				}
 			},
 		},
@@ -183,8 +205,7 @@ func main() {
 
 				err := repo.ListMachines()
 				if err != nil {
-					fmt.Println(err)
-					os.Exit(1)
+					log.Fatal(err)
 				}
 			},
 		},
@@ -194,10 +215,15 @@ func main() {
 			Flags: []cli.Flag{
 				cli.BoolFlag{
 					Name:  "remove",
-					Usage: "remove original files, defaults to false",
+					Usage: "remove unencrypted file, defaults to false",
 				},
 			},
 			Action: func(c *cli.Context) {
+				machine, err := repo.CurrentMachine()
+				if err != nil {
+					log.Fatal(err)
+				}
+
 				cfg, err := config.AcquireConfig(machine)
 				if err != nil {
 					log.Fatal(err)
@@ -220,10 +246,15 @@ func main() {
 			Flags: []cli.Flag{
 				cli.BoolFlag{
 					Name:  "remove",
-					Usage: "remove decrypted files, defaults to false",
+					Usage: "remove encrypted file, defaults to false",
 				},
 			},
 			Action: func(c *cli.Context) {
+				machine, err := repo.CurrentMachine()
+				if err != nil {
+					log.Fatal(err)
+				}
+
 				cfg, err := config.AcquireConfig(machine)
 				if err != nil {
 					log.Fatal(err)
@@ -241,8 +272,9 @@ func main() {
 			},
 		},
 		{
-			Name:  "gen-key",
-			Usage: "generate a private/public key pair",
+			Name:        "gen-key",
+			Usage:       "generate a private/public key pair",
+			Description: "Takes a name, comment, and email address as arguments.",
 			Action: func(c *cli.Context) {
 				if len(c.Args()) != 3 {
 					cli.ShowCommandHelp(c, "gen-key")
@@ -255,8 +287,7 @@ func main() {
 
 				err := encrypter.NewKeyPair(name, comment, email)
 				if err != nil {
-					log.Println(err)
-					os.Exit(1)
+					log.Fatal(err)
 				}
 			},
 		},

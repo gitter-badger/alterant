@@ -3,6 +3,7 @@ package repo
 import (
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"time"
 
@@ -21,6 +22,10 @@ func uncommittedChanges(repo *git.Repository) (bool, error) {
 	}
 
 	count, err := statusList.EntryCount()
+	if err != nil {
+		return false, err
+	}
+
 	if count > 0 {
 		return true, nil
 	}
@@ -196,4 +201,37 @@ func CurrentMachine() (machine string, err error) {
 	}
 
 	return branchName, nil
+}
+
+// CloneToAlterantDir clones the requested machine to ~/.alterant
+func CloneToAlterantDir(url string, machine string, alterantDir string) error {
+	repoPath := path.Join(alterantDir, machine)
+	repo, err := git.Clone(url, repoPath, &git.CloneOptions{})
+	if err != nil {
+		return err
+	}
+
+	remote, err := repo.Remotes.Lookup("origin")
+	if err != nil {
+		return err
+	}
+
+	fetchOpts := &git.FetchOptions{}
+	err = remote.Fetch([]string{}, fetchOpts, "")
+	if err != nil {
+		return err
+	}
+
+	repo.SetHead("refs/remotes/origin/" + machine)
+
+	opts := &git.CheckoutOpts{
+		Strategy: git.CheckoutSafe | git.CheckoutForce,
+	}
+
+	// checkout the head now pointing to the machine's branch
+	if err := repo.CheckoutHead(opts); err != nil {
+		return err
+	}
+
+	return nil
 }

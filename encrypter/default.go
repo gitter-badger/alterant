@@ -21,9 +21,9 @@ import (
 	"github.com/autonomy/alterant/logger"
 )
 
-const (
-	defaultPublicKeyOutput  = "pubring.gpg"
-	defaultPrivateKeyOutput = "secring.gpg"
+var (
+	defaultPublicKeyOutput  = os.Getenv("HOME") + "/.alterant/pubring.gpg"
+	defaultPrivateKeyOutput = os.Getenv("HOME") + "/.alterant/secring.gpg"
 )
 
 // DefaultEncryption is a basic encryption handler and is the default
@@ -139,7 +139,7 @@ func savePrivateKey(e *openpgp.Entity, pgpCfg *packet.Config) error {
 	return nil
 }
 
-// NewKeyPair Creates a new RSA/RSA key pair with the provided identity details and signs the
+// NewKeyPair Creates a new RSA/RSA  private/public key pair with the provided identity details and signs the
 // public key with the private key
 func NewKeyPair(name string, comment string, email string) error {
 	pgpCfg := newPGPConfig()
@@ -198,7 +198,7 @@ func signedEntity(privateKey string) (*openpgp.Entity, error) {
 }
 
 func encryptFile(file string, to *openpgp.EntityList, signed *openpgp.Entity, pgpCfg *packet.Config) error {
-	// read the file inteded for encryption into a buffer
+	// read the file intended for encryption into a buffer
 	content, err := readFromFile(file)
 	if err != nil {
 		return err
@@ -386,8 +386,6 @@ func newPGPConfig() *packet.Config {
 
 // NewDefaultEncryption returns an instance of `DefaultEncryption`
 func NewDefaultEncryption(password string, private string, public string, remove bool, logger *logWrapper.LogWrapper) *DefaultEncryption {
-fmt.Println(private)
-fmt.Println(public)
 	return &DefaultEncryption{
 		logger:   logger,
 		Password: password,

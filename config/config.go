@@ -47,7 +47,7 @@ func AcquireConfig(machine string) (*Config, error) {
 		return nil, err
 	}
 
-	// require that alter.yaml exists in the cwd
+	// require that machine + ".yaml" exists in the cwd
 	if _, err := os.Stat(path.Join(cwd, file)); os.IsNotExist(err) {
 		return nil, err
 	}

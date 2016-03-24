@@ -62,17 +62,17 @@ func (p *DefaultProvisioner) Provision(requests []string) error {
 	return nil
 }
 
-// Clean removes provisioned links
-func (p *DefaultProvisioner) Clean() error {
-	p.Logger.Info("Cleaning: %s", p.Cfg.Machine)
-	// for _, task := range p.Cfg.Tasks {
-	// 	p.Linker.RemoveLinks(task.Links)
-	// }
+// Remove removes provisioned tasks
+func (p *DefaultProvisioner) Remove(requests []string) error {
+	p.Logger.Info("Removing: %s", p.Cfg.Machine)
+	for _, task := range p.Cfg.Tasks {
+		p.Linker.RemoveLinks(task.Links)
+	}
 
 	return nil
 }
 
-// NewDefaultProvisioner returns and instance of a `DefaultProvisioner`
+// NewDefaultProvisioner returns an instance of a `DefaultProvisioner`
 func NewDefaultProvisioner(cfg *config.Config, c *cli.Context) *DefaultProvisioner {
 	logger := logWrapper.NewLogWrapper(c.GlobalBool("verbose"))
 
