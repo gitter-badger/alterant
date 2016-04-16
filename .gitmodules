@@ -1,3 +1,9 @@
-[submodule "git2go"]
-	path = git2go
+[submodule "submodules/git2go"]
+	path = submodules/git2go
 	url = https://github.com/libgit2/git2go.git
+[submodule "submodules/openssl"]
+	path = submodules/openssl
+	url = https://github.com/openssl/openssl.git
+[submodule "submodules/libssh2"]
+	path = submodules/libssh2
+	url = https://github.com/libssh2/libssh2.git

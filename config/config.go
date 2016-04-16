@@ -48,7 +48,7 @@ func AcquireConfig(machine string) (*Config, error) {
 	}
 
 	// require that machine + ".yaml" exists in the cwd
-	if _, err := os.Stat(path.Join(cwd, file)); os.IsNotExist(err) {
+	if _, err = os.Stat(path.Join(cwd, file)); os.IsNotExist(err) {
 		return nil, err
 	}
 

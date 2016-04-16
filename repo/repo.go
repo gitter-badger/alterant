@@ -85,7 +85,7 @@ func CreateMachine(machine string) error {
 		return fmt.Errorf("Cannot create %s, there are uncommitted changes", machine)
 	}
 
-	// crate a bare branch as outlined here: https://people.debian.org/~mika/forensics/git.html#branch
+	// create a bare branch as outlined here: https://people.debian.org/~mika/forensics/git.html#branch
 	_, err = repo.References.CreateSymbolic("HEAD", refname, true, "")
 	if err != nil {
 		return err
@@ -206,30 +206,8 @@ func CurrentMachine() (machine string, err error) {
 // CloneToAlterantDir clones the requested machine to ~/.alterant
 func CloneToAlterantDir(url string, machine string, alterantDir string) error {
 	repoPath := path.Join(alterantDir, machine)
-	repo, err := git.Clone(url, repoPath, &git.CloneOptions{})
+	_, err := git.Clone(url, repoPath, &git.CloneOptions{CheckoutBranch: machine})
 	if err != nil {
-		return err
-	}
-
-	remote, err := repo.Remotes.Lookup("origin")
-	if err != nil {
-		return err
-	}
-
-	fetchOpts := &git.FetchOptions{}
-	err = remote.Fetch([]string{}, fetchOpts, "")
-	if err != nil {
-		return err
-	}
-
-	repo.SetHead("refs/remotes/origin/" + machine)
-
-	opts := &git.CheckoutOpts{
-		Strategy: git.CheckoutSafe | git.CheckoutForce,
-	}
-
-	// checkout the head now pointing to the machine's branch
-	if err := repo.CheckoutHead(opts); err != nil {
 		return err
 	}
 

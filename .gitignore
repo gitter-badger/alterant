@@ -1,2 +1,5 @@
 build
 alterant
+install
+vendor/**
+!vendor/manifest

@@ -101,11 +101,6 @@ func main() {
 					log.Fatal(err)
 				}
 
-				// machine, err := repo.CurrentMachine()
-				// if err != nil {
-				// 	log.Fatal(err)
-				// }
-
 				cfg, err := config.AcquireConfig(requestedMachine)
 				if err != nil {
 					log.Fatal(err)

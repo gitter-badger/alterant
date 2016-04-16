@@ -1,0 +1,82 @@
+{
+	"version": 0,
+	"dependencies": [
+		{
+			"importpath": "github.com/andrewrynhard/go-mask",
+			"repository": "https://github.com/andrewrynhard/go-mask",
+			"vcs": "git",
+			"revision": "6d3ea05f56fa3bd7328b44ac5caf4359423edaf2",
+			"branch": "master",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/codegangsta/cli",
+			"repository": "https://github.com/codegangsta/cli",
+			"vcs": "git",
+			"revision": "71f57d300dd6a780ac1856c005c4b518cfd498ec",
+			"branch": "master",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/libgit2/git2go",
+			"repository": "https://github.com/libgit2/git2go",
+			"vcs": "git",
+			"revision": "95793ac11dbca2f35770c690d9ba7e64d7018815",
+			"branch": "master",
+			"notests": true
+		},
+		{
+			"importpath": "golang.org/x/crypto/cast5",
+			"repository": "https://go.googlesource.com/crypto",
+			"vcs": "git",
+			"revision": "1777f3ba8c1fed80fcaec3317e3aaa4f627764d2",
+			"branch": "master",
+			"path": "/cast5",
+			"notests": true
+		},
+		{
+			"importpath": "golang.org/x/crypto/openpgp",
+			"repository": "https://go.googlesource.com/crypto",
+			"vcs": "git",
+			"revision": "1777f3ba8c1fed80fcaec3317e3aaa4f627764d2",
+			"branch": "master",
+			"path": "/openpgp",
+			"notests": true
+		},
+		{
+			"importpath": "golang.org/x/crypto/openpgp/armor",
+			"repository": "https://go.googlesource.com/crypto",
+			"vcs": "git",
+			"revision": "1777f3ba8c1fed80fcaec3317e3aaa4f627764d2",
+			"branch": "master",
+			"path": "/openpgp/armor",
+			"notests": true
+		},
+		{
+			"importpath": "golang.org/x/crypto/openpgp/packet",
+			"repository": "https://go.googlesource.com/crypto",
+			"vcs": "git",
+			"revision": "1777f3ba8c1fed80fcaec3317e3aaa4f627764d2",
+			"branch": "master",
+			"path": "/openpgp/packet",
+			"notests": true
+		},
+		{
+			"importpath": "golang.org/x/crypto/ssh/terminal",
+			"repository": "https://go.googlesource.com/crypto",
+			"vcs": "git",
+			"revision": "1777f3ba8c1fed80fcaec3317e3aaa4f627764d2",
+			"branch": "master",
+			"path": "/ssh/terminal",
+			"notests": true
+		},
+		{
+			"importpath": "gopkg.in/yaml.v2",
+			"repository": "https://gopkg.in/yaml.v2",
+			"vcs": "git",
+			"revision": "a83829b6f1293c91addabc89d0571c246397bbf4",
+			"branch": "master",
+			"notests": true
+		}
+	]
+}

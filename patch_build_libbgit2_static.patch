@@ -1,0 +1,27 @@
+--- build-libgit2-static.sh.orig	2016-04-14 22:49:53.000000000 -0700
++++ build-libgit2-static.sh	2016-04-14 22:52:04.000000000 -0700
+@@ -2,10 +2,12 @@
+
+ set -ex
+
+-VENDORED_PATH=vendor/libgit2
++INSTALL_PATH="$PWD/install"
++VENDORED_PATH="$PWD/submodules/git2go/vendor/libgit2"
++export PKG_CONFIG_PATH="$INSTALL_PATH/lib/pkgconfig:$INSTALL_PATH/lib64/pkgconfig"
+
+ cd $VENDORED_PATH &&
+-mkdir -p install/lib &&
++mkdir -p $INSTALL_PATH/lib &&
+ mkdir -p build &&
+ cd build &&
+ cmake -DTHREADSAFE=ON \
+@@ -13,7 +15,8 @@
+       -DBUILD_SHARED_LIBS=OFF \
+       -DCMAKE_C_FLAGS=-fPIC \
+       -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+-      -DCMAKE_INSTALL_PREFIX=../install \
++      -DCMAKE_INSTALL_PREFIX=$INSTALL_PATH \
+       .. &&
+
+ cmake --build .
++make install
