@@ -32,7 +32,7 @@ func (dc *DefaultCommander) Execute(t *task.Task) error {
 			cmd.Stdin = os.Stdin
 		}
 
-		dc.logger.Info("Executing command: %s", taskCmd)
+		dc.logger.Info(2, "Executing command: \n%s", taskCmd)
 		err := cmd.Run()
 		if err != nil {
 			return err

@@ -15,7 +15,7 @@ type Environment struct {
 // Set exports the variables to the environment
 func (e *Environment) Set(environment map[string]string) {
 	for variable, value := range environment {
-		e.logger.Info("Exporting %s: %s", os.ExpandEnv(variable), os.ExpandEnv(value))
+		e.logger.Info(0, "Exporting %s: %s", os.ExpandEnv(variable), os.ExpandEnv(value))
 		os.Setenv(os.ExpandEnv(variable), os.ExpandEnv(value))
 	}
 }

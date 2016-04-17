@@ -89,35 +89,28 @@ func main() {
 				}
 
 				url := c.Args()[0]
-				requestedMachine := c.Args()[1]
+				for _, requestedMachine := range c.Args().Tail() {
+					err := repo.CloneToAlterantDir(url, requestedMachine, alterantDir)
+					if err != nil {
+						log.Fatal(err)
+					}
 
-				err := repo.CloneToAlterantDir(url, requestedMachine, alterantDir)
-				if err != nil {
-					log.Fatal(err)
-				}
+					err = os.Chdir(path.Join(alterantDir, requestedMachine))
+					if err != nil {
+						log.Fatal(err)
+					}
 
-				err = os.Chdir(path.Join(alterantDir, requestedMachine))
-				if err != nil {
-					log.Fatal(err)
-				}
+					cfg, err := config.AcquireConfig(requestedMachine)
+					if err != nil {
+						log.Fatal(err)
+					}
 
-				cfg, err := config.AcquireConfig(requestedMachine)
-				if err != nil {
-					log.Fatal(err)
-				}
+					provisioner := provisioner.NewDefaultProvisioner(cfg, c)
 
-				var requests []string
-				if len(c.Args()) > 2 {
-					requests = c.Args()[2:]
-				} else {
-					requests = cfg.Order
-				}
-
-				provisioner := provisioner.NewDefaultProvisioner(cfg, c)
-
-				err = provisioner.Provision(requests)
-				if err != nil {
-					log.Fatal(err)
+					err = provisioner.Provision(cfg.Order)
+					if err != nil {
+						log.Fatal(err)
+					}
 				}
 			},
 		},
@@ -130,29 +123,29 @@ func main() {
 					os.Exit(1)
 				}
 
-				machine, err := repo.CurrentMachine()
-				if err != nil {
-					log.Fatal(err)
-				}
+				// machine, err := repo.CurrentMachine()
+				// if err != nil {
+				// 	log.Fatal(err)
+				// }
 
-				cfg, err := config.AcquireConfig(machine)
-				if err != nil {
-					log.Fatal(err)
-				}
+				// cfg, err := config.AcquireConfig(machine)
+				// if err != nil {
+				// 	log.Fatal(err)
+				// }
 
-				var requests []string
-				if len(c.Args()) == 0 {
-					requests = cfg.Order
-				} else {
-					requests = c.Args()
-				}
+				// var requests []string
+				// if len(c.Args()) == 0 {
+				// 	requests = cfg.Order
+				// } else {
+				// 	requests = c.Args()
+				// }
 
-				provisioner := provisioner.NewDefaultProvisioner(cfg, c)
+				// provisioner := provisioner.NewDefaultProvisioner(cfg, c)
 
-				err = provisioner.Remove(requests)
-				if err != nil {
-					log.Fatal(err)
-				}
+				// err = provisioner.Remove(requests)
+				// if err != nil {
+				// 	log.Fatal(err)
+				// }
 			},
 		},
 		{

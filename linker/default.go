@@ -53,7 +53,7 @@ func (dl *DefaultLinker) removeLink(link string) error {
 		return err
 	}
 
-	dl.logger.Info("Symlink removed: %s", link)
+	dl.logger.Info(2, "Symlink removed: %s", link)
 
 	return nil
 }
@@ -85,7 +85,7 @@ func (dl *DefaultLinker) createParents(link string) error {
 	parentDir := path.Dir(link)
 
 	if _, err := os.Stat(parentDir); os.IsNotExist(err) {
-		dl.logger.Info("Creating path: %s", parentDir)
+		dl.logger.Info(2, "Creating path: %s", parentDir)
 		if err := os.MkdirAll(parentDir, 0755); err != nil {
 			return err
 		}
@@ -135,7 +135,7 @@ func (dl *DefaultLinker) CreateLinks(links []*Link) error {
 			return err
 		}
 
-		dl.logger.Info("Symlink created: %s -> %s", link.Destination, link.Target)
+		dl.logger.Info(2, "Symlink created: %s -> %s", link.Destination, link.Target)
 	}
 
 	return nil

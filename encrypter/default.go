@@ -271,14 +271,14 @@ func (de *DefaultEncryption) EncryptFiles(cfg *config.Config) error {
 					return err
 				}
 
-				de.logger.Info("Encrypting: %s", file)
+				de.logger.Info(2, "Encrypting: %s", file)
 				err = encryptFile(file, &to, signed, pgpCfg)
 				if err != nil {
 					return err
 				}
 
 				if de.Remove {
-					de.logger.Info("Removing: %s", file)
+					de.logger.Info(2, "Removing: %s", file)
 					err = os.Remove(file)
 					if err != nil {
 						return err
@@ -354,14 +354,14 @@ func (de *DefaultEncryption) DecryptFiles(cfg *config.Config) error {
 					return err
 				}
 
-				de.logger.Info("Decrypting: %s", file)
+				de.logger.Info(2, "Decrypting: %s", file)
 				err = decryptFile(file, &to, pgpCfg)
 				if err != nil {
 					return err
 				}
 
 				if de.Remove {
-					de.logger.Info("Removing: %s", file)
+					de.logger.Info(2, "Removing: %s", file)
 					err = os.Remove(file)
 					if err != nil {
 						return err

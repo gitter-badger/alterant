@@ -18,6 +18,14 @@
 			"notests": true
 		},
 		{
+			"importpath": "github.com/deckarep/golang-set",
+			"repository": "https://github.com/deckarep/golang-set",
+			"vcs": "git",
+			"revision": "1f0f4ff8d3fbef9328522993ce71c35890f67554",
+			"branch": "master",
+			"notests": true
+		},
+		{
 			"importpath": "github.com/libgit2/git2go",
 			"repository": "https://github.com/libgit2/git2go",
 			"vcs": "git",

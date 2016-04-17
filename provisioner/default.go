@@ -7,6 +7,7 @@ import (
 	"github.com/autonomy/alterant/environment"
 	"github.com/autonomy/alterant/linker"
 	"github.com/autonomy/alterant/logger"
+	"github.com/autonomy/alterant/task"
 	"github.com/codegangsta/cli"
 )
 
@@ -21,8 +22,8 @@ type DefaultProvisioner struct {
 }
 
 // Provision provisions a machine
-func (p *DefaultProvisioner) Provision(requests []string) error {
-	p.Logger.Info("Provisioning: %s", p.Cfg.Machine)
+func (p *DefaultProvisioner) Provision(requests []*task.Task) error {
+	p.Logger.Info(0, "Provisioning: %s", p.Cfg.Machine)
 
 	// decrypt files
 	err := p.Encrypter.DecryptFiles(p.Cfg)
@@ -30,14 +31,8 @@ func (p *DefaultProvisioner) Provision(requests []string) error {
 		return err
 	}
 
-	// iterate over the request array to preserve the order of tasks
-	for _, request := range requests {
-		task := p.Cfg.Tasks[request]
-		if task == nil {
-			continue
-		}
-
-		p.Logger.Info("Attempting to fulfill request: %s", request)
+	for _, task := range requests {
+		p.Logger.Info(1, "Attempting task: %s", task.Name)
 
 		// export environment variables specific to the specified machine
 		p.Environment.Set(p.Cfg.Environment)
@@ -54,17 +49,17 @@ func (p *DefaultProvisioner) Provision(requests []string) error {
 			return err
 		}
 
-		p.Logger.Info("Request fulfilled: %s", request)
+		p.Logger.Info(1, "Task fulfilled: %s", task.Name)
 	}
 
-	p.Logger.Info("Provisioned: %s", p.Cfg.Machine)
+	p.Logger.Info(0, "Provisioned: %s", p.Cfg.Machine)
 
 	return nil
 }
 
 // Remove removes provisioned tasks
 func (p *DefaultProvisioner) Remove(requests []string) error {
-	p.Logger.Info("Removing: %s", p.Cfg.Machine)
+	p.Logger.Info(2, "Removing: %s", p.Cfg.Machine)
 	for _, task := range p.Cfg.Tasks {
 		p.Linker.RemoveLinks(task.Links)
 	}

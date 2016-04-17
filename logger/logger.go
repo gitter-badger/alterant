@@ -1,6 +1,9 @@
 package logWrapper
 
-import "log"
+import (
+	"log"
+	"strings"
+)
 
 // LogWrapper formats log output specific to alterant
 type LogWrapper struct {
@@ -8,8 +11,8 @@ type LogWrapper struct {
 }
 
 // Info displays messages in green
-func (l *LogWrapper) Info(format string, v ...interface{}) {
-	format = "\033[32m\033[1m" + format + "\033[0m"
+func (l *LogWrapper) Info(level int, format string, v ...interface{}) {
+	format = "\033[32m\033[1m" + "<" + strings.Repeat("=", level) + "> " + format + "\033[0m"
 	if l.Verbose {
 		log.Printf(format, v...)
 	}
