@@ -8,8 +8,10 @@ LINUX_OUTPUTS := ./build/linux-386/alterant ./build/linux-amd64/alterant
 .PHONY: vendor
 
 vendor:
-	find ./vendor/* -type d -maxdepth 0 -exec rm -rfv {} \;
 	gvt restore
+	git clone https://github.com/libgit2/git2go.git ./vendor/github.com/libgit2/git2go
+	cd ./vendor/github.com/libgit2/git2go; git checkout next; git submodule update --init
+	git submodule update --init
 
 install/lib/libssl.a:
 	./script/build-openssl-static.sh
@@ -20,15 +22,15 @@ install/lib/libssh2.a:
 	./script/build-libssh2-static.sh
 
 install/lib/libgit2.a:
-	cd ./submodules/git2go; git checkout next; git submodule update --init
-	patch submodules/git2go/script/build-libgit2-static.sh < script/patch_build_libbgit2_static.patch
-	./submodules/git2go/script/build-libgit2-static.sh
+	chmod +x vendor/github.com/libgit2/git2go/script/*.sh
+	patch vendor/github.com/libgit2/git2go/script/build-libgit2-static.sh < script/patch_build_libbgit2_static.patch
+	./vendor/github.com/libgit2/git2go/script/build-libgit2-static.sh
 
 # -L is being interpreted relative to the location of the package being built
 #  so we execute the script from within git2go
 #  NOTE: the order of dependent targets is important, ensuring that system libraries are not linked
 deps: vendor $(OBJS)
-	cd submodules/git2go; ../../script/with-static-all.sh go install ./...
+	cd vendor/github.com/libgit2/git2go; ../../../../script/with-static-all.sh go install ./...
 
 build/darwin-amd64/alterant:
 	env CGO_LDFLAGS="-L$(PWD)/install/lib -lgit2 -lssh2 -lssl -lcrypto -lcurl -liconv -ldl -lz -framework CoreFoundation -framework Security" PKG_CONFIG_PATH="$(PWD)/install/lib/pkgconfig:$(PWD)/install/lib64/pkgconfig" GOOS=darwin GOARCH=amd64 go build -x -ldflags "-X main.version=$(VERSION)" -o build/darwin-amd64/alterant
@@ -42,7 +44,7 @@ build/linux-amd64/alterant:
 build/linux-386/alterant:
 	env GOOS=linux GOARCH=386 go build -ldflags "-X main.version=$(VERSION)" -o build/linux-386/alterant
 
-darwin: build/darwin-amd64/alterant #build/darwin-386/alterant 
+darwin: build/darwin-amd64/alterant #build/darwin-386/alterant
 
 linux: build/linux-amd64/alterant #build/linux-386/alterant
 
@@ -59,6 +61,7 @@ endif
 deps-clean:
 	rm -rf install
 	rm -rf submodules/*
+	find ./vendor/* -type d -maxdepth 0 -exec rm -rfv {} \;
 
 clean:
 	rm -rf ./build

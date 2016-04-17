@@ -26,14 +26,6 @@
 			"notests": true
 		},
 		{
-			"importpath": "github.com/libgit2/git2go",
-			"repository": "https://github.com/libgit2/git2go",
-			"vcs": "git",
-			"revision": "95793ac11dbca2f35770c690d9ba7e64d7018815",
-			"branch": "master",
-			"notests": true
-		},
-		{
 			"importpath": "golang.org/x/crypto/cast5",
 			"repository": "https://go.googlesource.com/crypto",
 			"vcs": "git",

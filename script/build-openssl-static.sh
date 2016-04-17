@@ -8,9 +8,6 @@ SUBMODULE_PATH="$PWD/submodules/openssl"
 cd $SUBMODULE_PATH
 mkdir -p $INSTALL_PATH/lib
 
-# Switch to a stable version
-git checkout OpenSSL_1_0_2-stable
-
 FLAGS="--prefix=$INSTALL_PATH no-shared -fPIC"
 if [ $(uname) == "Darwin" ]; then
     ./Configure darwin64-x86_64-cc $FLAGS
