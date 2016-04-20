@@ -1,6 +1,14 @@
 package provisioner
 
 import (
+	"encoding/base64"
+	"fmt"
+	"log"
+
+	"gopkg.in/yaml.v2"
+
+	"crypto/sha1"
+
 	"github.com/autonomy/alterant/commander"
 	"github.com/autonomy/alterant/config"
 	"github.com/autonomy/alterant/encrypter"
@@ -8,6 +16,7 @@ import (
 	"github.com/autonomy/alterant/linker"
 	"github.com/autonomy/alterant/logger"
 	"github.com/autonomy/alterant/task"
+	"github.com/boltdb/bolt"
 	"github.com/codegangsta/cli"
 )
 
@@ -19,6 +28,78 @@ type DefaultProvisioner struct {
 	Linker      linker.Linker
 	Commander   commander.Commander
 	Cfg         *config.Config
+}
+
+type DBEntryType int
+
+const (
+	DEPENDENCY DBEntryType = iota
+	LINK
+	COMMAND
+)
+
+type DBEntry struct {
+	sha       string
+	raw       string
+	entryType DBEntryType
+}
+
+func NewDBEntry(name string, e []byte, entryType DBEntryType) DBEntry {
+	db, err := bolt.Open("/home/vagrant/.alterant/cache.db", 0600, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
+	h := sha1.New()
+	h.Write([]byte(string(e)))
+	sha := base64.URLEncoding.EncodeToString(h.Sum(nil))
+
+	db.Update(func(tx *bolt.Tx) error {
+		b, err := tx.CreateBucketIfNotExists([]byte(name))
+		if err != nil {
+			return fmt.Errorf("create bucket: %s", err)
+		}
+		fmt.Printf("%#v", b)
+		return nil
+	})
+
+	return DBEntry{sha: sha, raw: string(e), entryType: entryType}
+}
+
+func hashTask(t *task.Task) error {
+	var entries []DBEntry
+
+	for _, dep := range t.Dependencies {
+		d, err := yaml.Marshal(&dep)
+		if err != nil {
+			return err
+		}
+
+		entries = append(entries, NewDBEntry(t.Name, d, DEPENDENCY))
+	}
+
+	for _, link := range t.Links {
+		l, err := yaml.Marshal(&link)
+		if err != nil {
+			return err
+		}
+
+		entries = append(entries, NewDBEntry(t.Name, l, LINK))
+	}
+
+	for _, command := range t.Commands {
+		c, err := yaml.Marshal(&command)
+		if err != nil {
+			return err
+		}
+
+		entries = append(entries, NewDBEntry(t.Name, c, COMMAND))
+	}
+
+	fmt.Printf("%#v", entries)
+
+	return nil
 }
 
 // Provision provisions a machine
@@ -48,6 +129,8 @@ func (p *DefaultProvisioner) Provision(requests []*task.Task) error {
 		if err != nil {
 			return err
 		}
+
+		hashTask(task)
 
 		p.Logger.Info(1, "Task fulfilled: %s", task.Name)
 	}
@@ -83,4 +166,5 @@ func NewDefaultProvisioner(cfg *config.Config, c *cli.Context) *DefaultProvision
 	}
 
 	return p
+
 }
