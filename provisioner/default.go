@@ -161,6 +161,9 @@ func (p *DefaultProvisioner) Update(cfg *config.Config) error {
 		}
 
 		for _, task := range cfg.Order {
+			taskAdded := false
+			taskRenamed := false
+
 			tb := mb.Bucket([]byte("tasks"))
 			if tb == nil {
 				fmt.Println("Tasks not found in cache")
@@ -169,18 +172,20 @@ func (p *DefaultProvisioner) Update(cfg *config.Config) error {
 			}
 
 			t := tb.Bucket([]byte(task.Name))
+
 			if t == nil {
 				fmt.Printf("Task not found in cache: %s\n", task.Name)
 
+				// check if the task has been renamed
 				c := tb.Cursor()
 
-				// check if the task has been renamed
 				for k, v := c.First(); k != nil; k, v = c.Next() {
 					t = tb.Bucket([]byte(k))
 
 					sha1 := t.Get([]byte("SHA1"))
 
 					if task.SHA1 == string(sha1) {
+						taskRenamed = true
 						fmt.Printf("Task renamed: %s -> %s", k, task.Name)
 
 						tb.Delete([]byte(k))
@@ -196,46 +201,51 @@ func (p *DefaultProvisioner) Update(cfg *config.Config) error {
 					fmt.Printf("value=%s", v)
 				}
 
-				fmt.Printf("Adding new task: %s\n", task.Name)
+				if !taskRenamed {
+					fmt.Printf("Adding new task: %s\n", task.Name)
 
-				err = p.executeTask(task)
-				if err != nil {
-					return err
+					err = p.executeTask(task)
+					if err != nil {
+						return err
+					}
+
+					err = p.cacheTask(tb, task)
+					if err != nil {
+						return err
+					}
+
+					taskAdded = true
 				}
-
-				err = p.cacheTask(tb, task)
-				if err != nil {
-					return err
-				}
-
-				return nil
 			}
 
-			sha1 := t.Get([]byte("SHA1"))
+			if !taskAdded {
+				sha1 := t.Get([]byte("SHA1"))
 
-			if task.SHA1 == string(sha1) {
-				fmt.Printf("Task is clean: %s\n", task.Name)
-				continue
-			} else {
-				fmt.Printf("Updating task: %s\n", task.Name)
+				if task.SHA1 == string(sha1) {
+					fmt.Printf("Task is clean: %s\n", task.Name)
+					continue
+				} else {
+					fmt.Printf("Updating task: %s\n", task.Name)
 
-				err = tb.DeleteBucket([]byte(task.Name))
-				if err != nil {
-					return err
+					err = tb.DeleteBucket([]byte(task.Name))
+					if err != nil {
+						return err
+					}
+
+					err = p.executeTask(task)
+					if err != nil {
+						return err
+					}
+
+					err = p.cacheTask(tb, task)
+					if err != nil {
+						return err
+					}
+
 				}
-
-				err = p.executeTask(task)
-				if err != nil {
-					return err
-				}
-
-				err = p.cacheTask(tb, task)
-				if err != nil {
-					return err
-				}
-
 			}
 		}
+
 		return nil
 	})
 
