@@ -82,6 +82,7 @@ func (p *DefaultProvisioner) executeTask(task *task.Task) error {
 	// create the links specified in the task
 	err := p.Linker.CreateLinks(task.Links)
 	if err != nil {
+		fmt.Println(err)
 		return err
 	}
 
@@ -223,8 +224,16 @@ func (p *DefaultProvisioner) Update(cfg *config.Config) error {
 					return err
 				}
 
-				p.executeTask(task)
-				p.cacheTask(tb, task)
+				err = p.executeTask(task)
+				if err != nil {
+					return err
+				}
+
+				err = p.cacheTask(tb, task)
+				if err != nil {
+					return err
+				}
+
 			}
 		}
 		return nil

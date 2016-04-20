@@ -115,9 +115,28 @@ func main() {
 			},
 		},
 		{
-			Name:     "update",
-			Usage:    "update a machine with any remote changes",
-			Category: "Provisioning actions",
+			Name:      "update",
+			Usage:     "update a machine with any remote changes",
+			Category:  "Provisioning actions",
+			ArgsUsage: "[machines...]",
+			Flags: []cli.Flag{
+				cli.BoolTFlag{
+					Name:  "links",
+					Usage: "provision links, defaults to true",
+				},
+				cli.BoolTFlag{
+					Name:  "commands",
+					Usage: "provision commands, defaults to true",
+				},
+				cli.BoolFlag{
+					Name:  "parents",
+					Usage: "make parent directories as needed, defaults to false",
+				},
+				cli.BoolFlag{
+					Name:  "clobber",
+					Usage: "remove existing files/directories before linking, defaults to false",
+				},
+			},
 			Action: func(c *cli.Context) {
 				if len(c.Args()) == 0 {
 					cli.ShowSubcommandHelp(c)
