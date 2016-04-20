@@ -114,6 +114,37 @@ func main() {
 				}
 			},
 		},
+		{
+			Name:     "update",
+			Usage:    "update a machine with any remote changes",
+			Category: "Provisioning actions",
+			Action: func(c *cli.Context) {
+				if len(c.Args()) == 0 {
+					cli.ShowSubcommandHelp(c)
+					os.Exit(1)
+				}
+
+				for _, requestedMachine := range c.Args() {
+					err := os.Chdir(path.Join(alterantDir, requestedMachine))
+					if err != nil {
+						log.Fatal(err)
+					}
+
+					cfg, err := config.AcquireConfig(requestedMachine)
+					if err != nil {
+						log.Fatal(err)
+					}
+
+					provisioner := provisioner.NewDefaultProvisioner(cfg, c)
+
+					err = provisioner.Update(cfg)
+					if err != nil {
+						log.Fatal(err)
+					}
+				}
+
+			},
+		},
 		// {
 		// 	Name:     "remove",
 		// 	Usage:    "remove provisioned tasks",

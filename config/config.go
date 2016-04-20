@@ -6,10 +6,11 @@ import (
 	"os"
 	"path"
 
+	"gopkg.in/yaml.v2"
+
+	"github.com/autonomy/alterant/cache"
 	"github.com/autonomy/alterant/task"
 	"github.com/deckarep/golang-set"
-
-	"gopkg.in/yaml.v2"
 )
 
 // Config represents `machine.yaml`
@@ -18,6 +19,7 @@ type Config struct {
 	Tasks       map[string]*task.Task `yaml:"tasks"`
 	Machine     string
 	Order       []*task.Task
+	Sha1        string
 }
 
 func newConfig() *Config {
@@ -71,7 +73,11 @@ func loadConfig(file string) (*Config, error) {
 		return nil, err
 	}
 
+	sha := cache.SHAFromBytes(bytes)
+
 	cfg := newConfig()
+
+	cfg.Sha1 = sha
 
 	err = yaml.Unmarshal(bytes, &cfg)
 	if err != nil {

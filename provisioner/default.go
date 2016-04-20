@@ -1,14 +1,12 @@
 package provisioner
 
 import (
-	"encoding/base64"
 	"fmt"
 	"log"
 
 	"gopkg.in/yaml.v2"
 
-	"crypto/sha1"
-
+	"github.com/autonomy/alterant/cache"
 	"github.com/autonomy/alterant/commander"
 	"github.com/autonomy/alterant/config"
 	"github.com/autonomy/alterant/encrypter"
@@ -30,112 +28,207 @@ type DefaultProvisioner struct {
 	Cfg         *config.Config
 }
 
-type DBEntryType int
+func (p *DefaultProvisioner) cacheTask(tb *bolt.Bucket, task *task.Task) error {
+	// save the task to cache.db
+	p.Logger.Info(1, "Caching task: %s", task.Name)
 
-const (
-	DEPENDENCY DBEntryType = iota
-	LINK
-	COMMAND
-)
-
-type DBEntry struct {
-	sha       string
-	raw       string
-	entryType DBEntryType
-}
-
-func NewDBEntry(name string, e []byte, entryType DBEntryType) DBEntry {
-	db, err := bolt.Open("/home/vagrant/.alterant/cache.db", 0600, nil)
+	t, err := tb.CreateBucketIfNotExists([]byte(task.Name))
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
-	defer db.Close()
 
-	h := sha1.New()
-	h.Write([]byte(string(e)))
-	sha := base64.URLEncoding.EncodeToString(h.Sum(nil))
+	t.Put([]byte("SHA1"), []byte(task.SHA1))
 
-	db.Update(func(tx *bolt.Tx) error {
-		b, err := tx.CreateBucketIfNotExists([]byte(name))
-		if err != nil {
-			return fmt.Errorf("create bucket: %s", err)
-		}
-		fmt.Printf("%#v", b)
-		return nil
-	})
-
-	return DBEntry{sha: sha, raw: string(e), entryType: entryType}
-}
-
-func hashTask(t *task.Task) error {
-	var entries []DBEntry
-
-	for _, dep := range t.Dependencies {
-		d, err := yaml.Marshal(&dep)
+	for _, dep := range task.Dependencies {
+		err = t.Put([]byte(cache.SHAFromString(dep)), []byte(dep))
 		if err != nil {
 			return err
 		}
-
-		entries = append(entries, NewDBEntry(t.Name, d, DEPENDENCY))
 	}
 
-	for _, link := range t.Links {
+	for _, link := range task.Links {
 		l, err := yaml.Marshal(&link)
 		if err != nil {
 			return err
 		}
 
-		entries = append(entries, NewDBEntry(t.Name, l, LINK))
+		err = t.Put([]byte(link.SHA1), l)
+		if err != nil {
+			return err
+		}
 	}
 
-	for _, command := range t.Commands {
+	for _, command := range task.Commands {
 		c, err := yaml.Marshal(&command)
 		if err != nil {
 			return err
 		}
 
-		entries = append(entries, NewDBEntry(t.Name, c, COMMAND))
+		err = t.Put([]byte(command.SHA1), c)
+		if err != nil {
+			return err
+		}
 	}
 
-	fmt.Printf("%#v", entries)
+	return nil
+}
+
+func (p *DefaultProvisioner) executeTask(task *task.Task) error {
+	p.Logger.Info(1, "Attempting task: %s", task.Name)
+
+	// export environment variables specific to the specified machine
+	p.Environment.Set(p.Cfg.Environment)
+
+	// create the links specified in the task
+	err := p.Linker.CreateLinks(task.Links)
+	if err != nil {
+		return err
+	}
+
+	// execute the commands specified in the task
+	err = p.Commander.Execute(task)
+	if err != nil {
+		return err
+	}
+
+	p.Logger.Info(1, "Task fulfilled: %s", task.Name)
 
 	return nil
 }
 
 // Provision provisions a machine
 func (p *DefaultProvisioner) Provision(requests []*task.Task) error {
+	db, err := bolt.Open("/home/vagrant/.alterant/cache.db", 0600, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
 	p.Logger.Info(0, "Provisioning: %s", p.Cfg.Machine)
 
-	// decrypt files
-	err := p.Encrypter.DecryptFiles(p.Cfg)
-	if err != nil {
-		return err
-	}
-
-	for _, task := range requests {
-		p.Logger.Info(1, "Attempting task: %s", task.Name)
-
-		// export environment variables specific to the specified machine
-		p.Environment.Set(p.Cfg.Environment)
-
-		// create the links specified in the task
-		err = p.Linker.CreateLinks(task.Links)
+	db.Update(func(tx *bolt.Tx) error {
+		mb, err := tx.CreateBucketIfNotExists([]byte(p.Cfg.Machine))
 		if err != nil {
 			return err
 		}
 
-		// execute the commands specified in the task
-		err = p.Commander.Execute(task)
+		mb.Put([]byte("SHA1"), []byte(p.Cfg.Sha1))
+
+		tb, err := mb.CreateBucketIfNotExists([]byte("tasks"))
 		if err != nil {
 			return err
 		}
 
-		hashTask(task)
+		// decrypt files
+		err = p.Encrypter.DecryptFiles(p.Cfg)
+		if err != nil {
+			return err
+		}
 
-		p.Logger.Info(1, "Task fulfilled: %s", task.Name)
-	}
+		for _, task := range requests {
+			err = p.executeTask(task)
+			if err != nil {
+				return err
+			}
+
+			err = p.cacheTask(tb, task)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
 
 	p.Logger.Info(0, "Provisioned: %s", p.Cfg.Machine)
+
+	return nil
+}
+
+// Update updates a machine's tasks
+func (p *DefaultProvisioner) Update(cfg *config.Config) error {
+	db, err := bolt.Open("/home/vagrant/.alterant/cache.db", 0600, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
+	db.Update(func(tx *bolt.Tx) error {
+		mb := tx.Bucket([]byte(cfg.Machine))
+		if mb == nil {
+			fmt.Printf("Machine not found: %s\n", cfg.Machine)
+		}
+
+		for _, task := range cfg.Order {
+			tb := mb.Bucket([]byte("tasks"))
+			if tb == nil {
+				fmt.Println("Tasks not found in cache")
+
+				return nil
+			}
+
+			t := tb.Bucket([]byte(task.Name))
+			if t == nil {
+				fmt.Printf("Task not found in cache: %s\n", task.Name)
+
+				c := tb.Cursor()
+
+				// check if the task has been renamed
+				for k, v := c.First(); k != nil; k, v = c.Next() {
+					t = tb.Bucket([]byte(k))
+
+					sha1 := t.Get([]byte("SHA1"))
+
+					if task.SHA1 == string(sha1) {
+						fmt.Printf("Task renamed: %s -> %s", k, task.Name)
+
+						tb.Delete([]byte(k))
+
+						err = p.cacheTask(tb, task)
+						if err != nil {
+							return err
+						}
+
+						break
+					}
+
+					fmt.Printf("value=%s", v)
+				}
+
+				fmt.Printf("Adding new task: %s\n", task.Name)
+
+				err = p.executeTask(task)
+				if err != nil {
+					return err
+				}
+
+				err = p.cacheTask(tb, task)
+				if err != nil {
+					return err
+				}
+
+				return nil
+			}
+
+			sha1 := t.Get([]byte("SHA1"))
+
+			if task.SHA1 == string(sha1) {
+				fmt.Printf("Task is clean: %s\n", task.Name)
+				continue
+			} else {
+				fmt.Printf("Updating task: %s\n", task.Name)
+
+				err = tb.DeleteBucket([]byte(task.Name))
+				if err != nil {
+					return err
+				}
+
+				p.executeTask(task)
+				p.cacheTask(tb, task)
+			}
+		}
+		return nil
+	})
 
 	return nil
 }

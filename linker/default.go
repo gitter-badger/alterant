@@ -8,15 +8,9 @@ import (
 	"os"
 	"path"
 
+	"github.com/autonomy/alterant/link"
 	"github.com/autonomy/alterant/logger"
 )
-
-// Link represents a link in the machine yaml
-type Link struct {
-	Target      SymlinkTarget      `yaml:"target"`
-	Destination SymlinkDestination `yaml:"destination"`
-	Encrypted   bool               `yaml:"encrypted"`
-}
 
 //DefaultLinker is a basic symlink manager and is the default
 type DefaultLinker struct {
@@ -95,7 +89,7 @@ func (dl *DefaultLinker) createParents(link string) error {
 }
 
 // RemoveLinks removes symlinks
-func (dl *DefaultLinker) RemoveLinks(links []*Link) error {
+func (dl *DefaultLinker) RemoveLinks(links []*link.Link) error {
 	for _, link := range links {
 		err := dl.removeLink(string(link.Destination))
 		if err != nil {
@@ -107,7 +101,7 @@ func (dl *DefaultLinker) RemoveLinks(links []*Link) error {
 }
 
 // CreateLinks creates symlinks
-func (dl *DefaultLinker) CreateLinks(links []*Link) error {
+func (dl *DefaultLinker) CreateLinks(links []*link.Link) error {
 
 	// do not create links if not enabled
 	if !dl.enabled {
