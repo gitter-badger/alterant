@@ -1,8 +1,8 @@
 package task
 
 import (
-	"github.com/autonomy/alterant/cache"
 	"github.com/autonomy/alterant/command"
+	"github.com/autonomy/alterant/hasher"
 	"github.com/autonomy/alterant/link"
 	"gopkg.in/yaml.v2"
 )
@@ -37,7 +37,7 @@ func (t *Task) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		Dependencies: aux.Dependencies,
 		Links:        aux.Links,
 		Commands:     aux.Commands,
-		SHA1:         cache.SHAFromBytes(b),
+		SHA1:         hasher.SHA1FromBytes(b),
 	}
 
 	return nil

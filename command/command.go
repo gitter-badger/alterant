@@ -1,7 +1,7 @@
 package command
 
 import (
-	"github.com/autonomy/alterant/cache"
+	"github.com/autonomy/alterant/hasher"
 	"gopkg.in/yaml.v2"
 )
 
@@ -26,7 +26,7 @@ func (c *Command) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 	*c = Command{
 		Contents: aux,
-		SHA1:     cache.SHAFromBytes(b),
+		SHA1:     hasher.SHA1FromBytes(b),
 	}
 
 	return nil
