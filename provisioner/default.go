@@ -23,6 +23,10 @@ type DefaultProvisioner struct {
 }
 
 func (p *DefaultProvisioner) executeTask(task *task.Task) error {
+	if !task.Queued {
+		return nil
+	}
+
 	p.Logger.Info(1, "Attempting task: %s", task.Name)
 
 	// export environment variables specific to the specified machine
@@ -64,8 +68,6 @@ func (p *DefaultProvisioner) Provision() error {
 
 	p.Logger.Info(0, "Provisioned: %s", p.Cfg.Machine)
 
-	p.Logger.Info(0, "Caching: %s", p.Cfg.Machine)
-
 	err = cache.WriteToFile(p.Cfg)
 	if err != nil {
 		return err
@@ -81,51 +83,54 @@ func (p *DefaultProvisioner) Update() error {
 		return err
 	}
 
-	if machine, ok := cache.Machines[p.Cfg.Machine]; ok {
-		if machine.SHA1 == p.Cfg.SHA1 {
-			p.Logger.Info(1, "Machine is clean: %s", p.Cfg.Machine)
+	if cachedMachine, ok := cache.Machines[p.Cfg.Machine]; ok {
+		if cachedMachine.SHA1 == p.Cfg.SHA1 {
+			p.Logger.Info(0, "Machine up to date: %s", p.Cfg.Machine)
 
 			return nil
 		}
 
-		p.Logger.Info(1, "Changes detected for machine: %s", p.Cfg.Machine)
+		p.Logger.Info(0, "Preparing machine for update: %s", p.Cfg.Machine)
 
-		for i := len(p.Cfg.Tasks) - 1; i >= 0; i-- {
-			task := p.Cfg.Tasks[i]
-			if t, ok := machine.Tasks[task.Name]; ok {
-				if t.SHA1 == task.SHA1 {
-					p.Logger.Info(2, "Task is clean: %s", task.Name)
-
-					p.Cfg.Tasks = append(p.Cfg.Tasks[:i], p.Cfg.Tasks[i+1:]...)
+		for _, task := range p.Cfg.Tasks {
+			if cachedTask, ok := cachedMachine.Tasks[task.Name]; ok {
+				if cachedTask.SHA1 == task.SHA1 {
+					task.Queued = false
 				} else {
-					p.Logger.Info(2, "Task is dirty: %s", task.Name)
-					for _, l := range t.Links {
-						for i := len(task.Links) - 1; i >= 0; i-- {
-							if l == task.Links[i].SHA1 {
-								p.Logger.Info(2, "Link is clean: %s", l)
+					p.Logger.Info(1, "Task queued for update: %s", task.Name)
 
-								task.Links = append(task.Links[:i], task.Links[i+1:]...)
-							} else {
-								p.Logger.Info(2, "Link has changed: %s", l)
-							}
+					// update the links
+					for _, SHA1 := range cachedTask.Links {
+						if link, ok := task.Links[SHA1]; ok {
+							link.Queued = false
 						}
 					}
 
-					for _, c := range t.Commands {
-						for i := len(task.Commands) - 1; i >= 0; i-- {
-							if c == task.Commands[i].SHA1 {
-								p.Logger.Info(2, "Command is clean: %s", c)
-
-								task.Commands = append(task.Commands[:i], task.Commands[i+1:]...)
-							} else {
-								p.Logger.Info(2, "Command has changed: %s", c)
-							}
+					// update the commands
+					for _, SHA1 := range cachedTask.Commands {
+						if command, ok := task.Commands[SHA1]; ok {
+							command.Queued = false
 						}
 					}
 				}
+
+				// update the cache
+				delete(cachedMachine.Tasks, task.Name)
+				cache.AddTask(cachedMachine, task)
 			} else {
-				p.Logger.Info(2, "New task detected: %s", task.Name)
-				// TODO: check for rename
+				for cachedTaskName, cachedTask := range cachedMachine.Tasks {
+					if cachedTask.SHA1 == task.SHA1 {
+						p.Logger.Info(1, "Task renamed: %s -> %s", cachedTaskName, task.Name)
+
+						task.Queued = false
+
+						// update the cache
+						delete(cachedMachine.Tasks, task.Name)
+						cache.AddTask(cachedMachine, task)
+
+						break
+					}
+				}
 			}
 		}
 	}

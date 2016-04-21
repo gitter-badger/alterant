@@ -10,9 +10,10 @@ import (
 // Task represents a task
 type Task struct {
 	Dependencies []string
-	Links        []*link.Link
-	Commands     []*command.Command
+	Links        map[string]*link.Link
+	Commands     map[string]*command.Command
 	Name         string
+	Queued       bool
 	SHA1         string
 }
 
@@ -28,6 +29,16 @@ func (t *Task) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 
+	links := make(map[string]*link.Link)
+	for _, link := range aux.Links {
+		links[link.SHA1] = link
+	}
+
+	commands := make(map[string]*command.Command)
+	for _, command := range aux.Commands {
+		commands[command.SHA1] = command
+	}
+
 	b, err := yaml.Marshal(&aux)
 	if err != nil {
 		return err
@@ -35,8 +46,9 @@ func (t *Task) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 	*t = Task{
 		Dependencies: aux.Dependencies,
-		Links:        aux.Links,
-		Commands:     aux.Commands,
+		Links:        links,
+		Commands:     commands,
+		Queued:       true,
 		SHA1:         hasher.SHA1FromBytes(b),
 	}
 

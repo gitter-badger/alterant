@@ -6,6 +6,7 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/autonomy/alterant/config"
+	"github.com/autonomy/alterant/task"
 )
 
 type Task struct {
@@ -20,7 +21,23 @@ type Machine struct {
 }
 
 type Cache struct {
-	Machines map[string]Machine
+	Machines map[string]Machine `yaml:"machines"`
+}
+
+func (c *Cache) AddTask(machine Machine, task *task.Task) {
+	t := Task{}
+
+	for _, link := range task.Links {
+		t.Links = append(t.Links, link.SHA1)
+	}
+
+	for _, command := range task.Commands {
+		t.Commands = append(t.Commands, command.SHA1)
+	}
+
+	t.SHA1 = task.SHA1
+
+	machine.Tasks[task.Name] = t
 }
 
 func WriteToFile(cfg *config.Config) error {
@@ -31,18 +48,7 @@ func WriteToFile(cfg *config.Config) error {
 	m.Tasks = make(map[string]Task)
 
 	for _, task := range cfg.Tasks {
-		t := Task{}
-
-		for _, link := range task.Links {
-			t.Links = append(t.Links, link.SHA1)
-		}
-
-		for _, command := range task.Commands {
-			t.Commands = append(t.Commands, command.SHA1)
-		}
-
-		t.SHA1 = task.SHA1
-		m.Tasks[task.Name] = t
+		cache.AddTask(m, task)
 	}
 
 	m.SHA1 = cfg.SHA1

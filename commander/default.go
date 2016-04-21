@@ -22,6 +22,10 @@ func (dc *DefaultCommander) Execute(t *task.Task) error {
 	}
 
 	for _, taskCmd := range t.Commands {
+		if !taskCmd.Queued {
+			continue
+		}
+
 		cmdName := "bash"
 		cmdArgs := []string{"-c", taskCmd.Contents}
 		cmd := exec.Command(cmdName, cmdArgs...)

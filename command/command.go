@@ -7,6 +7,7 @@ import (
 
 type Command struct {
 	Contents string
+	Queued   bool
 	SHA1     string
 }
 
@@ -26,6 +27,7 @@ func (c *Command) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 	*c = Command{
 		Contents: aux,
+		Queued:   true,
 		SHA1:     hasher.SHA1FromBytes(b),
 	}
 

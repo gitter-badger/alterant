@@ -89,7 +89,7 @@ func (dl *DefaultLinker) createParents(link string) error {
 }
 
 // RemoveLinks removes symlinks
-func (dl *DefaultLinker) RemoveLinks(links []*link.Link) error {
+func (dl *DefaultLinker) RemoveLinks(links map[string]*link.Link) error {
 	for _, link := range links {
 		err := dl.removeLink(string(link.Destination))
 		if err != nil {
@@ -101,7 +101,7 @@ func (dl *DefaultLinker) RemoveLinks(links []*link.Link) error {
 }
 
 // CreateLinks creates symlinks
-func (dl *DefaultLinker) CreateLinks(links []*link.Link) error {
+func (dl *DefaultLinker) CreateLinks(links map[string]*link.Link) error {
 
 	// do not create links if not enabled
 	if !dl.enabled {
@@ -109,6 +109,10 @@ func (dl *DefaultLinker) CreateLinks(links []*link.Link) error {
 	}
 
 	for _, link := range links {
+		if !link.Queued {
+			continue
+		}
+
 		if dl.parents {
 			err := dl.createParents(string(link.Destination))
 			if err != nil {

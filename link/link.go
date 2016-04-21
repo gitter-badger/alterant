@@ -4,8 +4,9 @@ import (
 	"os"
 	"path"
 
-	"github.com/autonomy/alterant/hasher"
 	"gopkg.in/yaml.v2"
+
+	"github.com/autonomy/alterant/hasher"
 )
 
 // SymlinkTarget is a custom type for symlink targets
@@ -19,6 +20,7 @@ type Link struct {
 	Target      SymlinkTarget
 	Destination SymlinkDestination
 	Encrypted   bool
+	Queued      bool
 	SHA1        string
 }
 
@@ -77,6 +79,7 @@ func (l *Link) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		Target:      aux.Target,
 		Destination: aux.Destination,
 		Encrypted:   aux.Encrypted,
+		Queued:      true,
 		SHA1:        hasher.SHA1FromBytes(b),
 	}
 
