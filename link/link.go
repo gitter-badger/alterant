@@ -17,9 +17,9 @@ type SymlinkDestination string
 
 // Link represents a link in the machine yaml
 type Link struct {
-	Target      SymlinkTarget      `yaml:"target"`
-	Destination SymlinkDestination `yaml:"destination"`
-	Encrypted   bool               `yaml:"encrypted"`
+	Target      SymlinkTarget
+	Destination SymlinkDestination
+	Encrypted   bool
 	SHA1        string
 }
 

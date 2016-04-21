@@ -6,11 +6,12 @@ import (
 
 	"gopkg.in/yaml.v2"
 
-	"github.com/autonomy/alterant/cache"
+	"github.com/autonomy/alterant/command"
 	"github.com/autonomy/alterant/commander"
 	"github.com/autonomy/alterant/config"
 	"github.com/autonomy/alterant/encrypter"
 	"github.com/autonomy/alterant/environment"
+	"github.com/autonomy/alterant/link"
 	"github.com/autonomy/alterant/linker"
 	"github.com/autonomy/alterant/logger"
 	"github.com/autonomy/alterant/task"
@@ -39,11 +40,16 @@ func (p *DefaultProvisioner) cacheTask(tb *bolt.Bucket, task *task.Task) error {
 
 	t.Put([]byte("SHA1"), []byte(task.SHA1))
 
-	for _, dep := range task.Dependencies {
-		err = t.Put([]byte(cache.SHAFromString(dep)), []byte(dep))
-		if err != nil {
-			return err
-		}
+	// 	for _, dep := range task.Dependencies {
+	// 		err = t.Put([]byte(cache.SHAFromString(dep)), []byte(dep))
+	// 		if err != nil {
+	// 			return err
+	// 		}
+	// 	}
+
+	lb, err := t.CreateBucketIfNotExists([]byte("links"))
+	if err != nil {
+		return err
 	}
 
 	for _, link := range task.Links {
@@ -52,10 +58,15 @@ func (p *DefaultProvisioner) cacheTask(tb *bolt.Bucket, task *task.Task) error {
 			return err
 		}
 
-		err = t.Put([]byte(link.SHA1), l)
+		err = lb.Put([]byte(link.SHA1), l)
 		if err != nil {
 			return err
 		}
+	}
+
+	cb, err := t.CreateBucketIfNotExists([]byte("commands"))
+	if err != nil {
+		return err
 	}
 
 	for _, command := range task.Commands {
@@ -64,7 +75,7 @@ func (p *DefaultProvisioner) cacheTask(tb *bolt.Bucket, task *task.Task) error {
 			return err
 		}
 
-		err = t.Put([]byte(command.SHA1), c)
+		err = cb.Put([]byte(command.SHA1), c)
 		if err != nil {
 			return err
 		}
@@ -146,6 +157,9 @@ func (p *DefaultProvisioner) Provision(requests []*task.Task) error {
 	return nil
 }
 
+// TODO: execute only the components that have been changed e.g. if a command
+// has been updated but everything else is the same, then only execute that
+// command
 // Update updates a machine's tasks
 func (p *DefaultProvisioner) Update(cfg *config.Config) error {
 	db, err := bolt.Open("/home/vagrant/.alterant/cache.db", 0600, nil)
@@ -198,9 +212,11 @@ func (p *DefaultProvisioner) Update(cfg *config.Config) error {
 						break
 					}
 
+					// TODO: I don't want to have to use `v`
 					fmt.Printf("value=%s", v)
 				}
 
+				// if the task is not a rename then it must be a new task
 				if !taskRenamed {
 					fmt.Printf("Adding new task: %s\n", task.Name)
 
@@ -218,6 +234,7 @@ func (p *DefaultProvisioner) Update(cfg *config.Config) error {
 				}
 			}
 
+			// if the task is not new, then it possibly needs updating
 			if !taskAdded {
 				sha1 := t.Get([]byte("SHA1"))
 
@@ -227,11 +244,42 @@ func (p *DefaultProvisioner) Update(cfg *config.Config) error {
 				} else {
 					fmt.Printf("Updating task: %s\n", task.Name)
 
-					err = tb.DeleteBucket([]byte(task.Name))
-					if err != nil {
-						return err
+					// err = tb.DeleteBucket([]byte(task.Name))
+					// if err != nil {
+					// 	return err
+					// }
+
+					lb := t.Bucket([]byte("links"))
+					if lb == nil {
+						fmt.Println("Links not found")
+						return fmt.Errorf("Links not found")
 					}
 
+					var links []*link.Link
+					for _, link := range task.Links {
+						l := lb.Get([]byte(link.SHA1))
+						if l == nil {
+							fmt.Println("Link exists")
+							links = append(links, link)
+						}
+					}
+					task.Links = links
+
+					cb := t.Bucket([]byte("commands"))
+					if cb == nil {
+						fmt.Println("Commands not found")
+						return fmt.Errorf("Commands not found")
+					}
+
+					var commands []*command.Command
+					for _, command := range task.Commands {
+						c := cb.Get([]byte(command.SHA1))
+						if c == nil {
+							commands = append(commands, command)
+						}
+					}
+
+					task.Commands = commands
 					err = p.executeTask(task)
 					if err != nil {
 						return err
