@@ -1,7 +1,7 @@
 # Alterant
-Alterant is a lightweight provisioning tool built with ease of use, security, and flexibility in mind.
+[![Build Status](https://travis-ci.org/autonomy/alterant.svg?branch=master)](https://travis-ci.org/autonomy/alterant)
 
-_Alter your machine with ease_.
+Alterant is a lightweight provisioning tool built with ease of use, security, and flexibility in mind - _Alter your machine with ease_.
 
 ### Features
 * Encrypts sensitive data with OpenPGP keys

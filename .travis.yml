@@ -1,0 +1,22 @@
+language: go
+
+os:
+  - linux
+  - osx
+
+go:
+  - 1.6
+  - tip
+
+install:
+    - go get -u github.com/FiloSottile/gvt
+    - cd $GOPATH/src/github.com/autonomy/alterant
+    - make deps
+    - make $TARGET
+
+matrix:
+    include:
+        - os: linux
+          env: TARGET=linux
+        - os: osx
+          env: TARGET=darwin
