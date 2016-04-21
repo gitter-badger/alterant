@@ -17,4 +17,4 @@ install:
     - make $TARGET
 script:
     - echo "Building for $TARGET"
-    - make $TARET
+    - make $TARGET
