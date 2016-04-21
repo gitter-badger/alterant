@@ -107,7 +107,7 @@ func main() {
 
 					provisioner := provisioner.NewDefaultProvisioner(cfg, c)
 
-					err = provisioner.Provision(cfg.Order)
+					err = provisioner.Provision()
 					if err != nil {
 						log.Fatal(err)
 					}
@@ -156,7 +156,7 @@ func main() {
 
 					provisioner := provisioner.NewDefaultProvisioner(cfg, c)
 
-					err = provisioner.Update(cfg)
+					err = provisioner.Update()
 					if err != nil {
 						log.Fatal(err)
 					}

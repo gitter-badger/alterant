@@ -15,20 +15,19 @@ type Task struct {
 }
 
 type Machine struct {
-	Machine string          `yaml:"machine"`
-	Tasks   map[string]Task `yaml:"tasks"`
-	SHA1    string          `yaml:"sha1"`
+	Tasks map[string]Task `yaml:"tasks"`
+	SHA1  string          `yaml:"sha1"`
 }
 
 type Cache struct {
-	Machines []Machine
+	Machines map[string]Machine
 }
 
 func WriteToFile(cfg *config.Config) error {
 	cache := Cache{}
 	m := Machine{}
-	m.Machine = cfg.Machine
 
+	cache.Machines = make(map[string]Machine)
 	m.Tasks = make(map[string]Task)
 
 	for _, task := range cfg.Tasks {
@@ -48,7 +47,7 @@ func WriteToFile(cfg *config.Config) error {
 
 	m.SHA1 = cfg.SHA1
 
-	cache.Machines = append(cache.Machines, m)
+	cache.Machines[cfg.Machine] = m
 
 	d, err := yaml.Marshal(&cache)
 	if err != nil {
@@ -61,4 +60,20 @@ func WriteToFile(cfg *config.Config) error {
 	}
 
 	return nil
+}
+
+func ReadCache() (*Cache, error) {
+	bytes, err := ioutil.ReadFile("/tmp/db.yaml")
+	if err != nil {
+		return nil, err
+	}
+
+	c := &Cache{}
+
+	err = yaml.Unmarshal(bytes, &c)
+	if err != nil {
+		return nil, err
+	}
+
+	return c, nil
 }

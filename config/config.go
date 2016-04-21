@@ -15,22 +15,55 @@ import (
 
 // Config represents `machine.yaml`
 type Config struct {
-	Environment map[string]string     `yaml:"environment"`
-	Tasks       map[string]*task.Task `yaml:"tasks"`
 	Machine     string
-	Order       []*task.Task
+	Environment map[string]string
+	Tasks       []*task.Task
 	SHA1        string
 }
 
+// UnmarshalYAML implements the yaml.Unmarshaler interface
+func (c *Config) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var aux struct {
+		Environment map[string]string     `yaml:"environment"`
+		Tasks       map[string]*task.Task `yaml:"tasks"`
+	}
+
+	err := unmarshal(&aux)
+	if err != nil {
+		return err
+	}
+
+	for name, task := range aux.Tasks {
+		task.Name = name
+	}
+
+	b, err := yaml.Marshal(&aux)
+	if err != nil {
+		return err
+	}
+
+	tasks, err := resolveDependencies(aux.Tasks)
+	if err != nil {
+		return err
+	}
+
+	*c = Config{
+		Environment: aux.Environment,
+		Tasks:       tasks,
+		SHA1:        hasher.SHA1FromBytes(b),
+	}
+
+	return nil
+}
 func newConfig() *Config {
 	return &Config{}
 }
 
-func resolveDependencies(cfg *Config) error {
+func resolveDependencies(tasks map[string]*task.Task) ([]*task.Task, error) {
+	var t []*task.Task
 	taskDependencies := make(map[string]mapset.Set)
 
-	for taskName, task := range cfg.Tasks {
-		task.Name = taskName
+	for taskName, task := range tasks {
 		dependencySet := mapset.NewSet()
 
 		for _, dep := range task.Dependencies {
@@ -50,12 +83,12 @@ func resolveDependencies(cfg *Config) error {
 		}
 
 		if readySet.Cardinality() == 0 {
-			return fmt.Errorf("Circular dependency found.")
+			return nil, fmt.Errorf("Circular dependency found.")
 		}
 
 		for name := range readySet.Iter() {
 			delete(taskDependencies, name.(string))
-			cfg.Order = append(cfg.Order, cfg.Tasks[name.(string)])
+			t = append(t, tasks[name.(string)])
 		}
 
 		for name, deps := range taskDependencies {
@@ -64,7 +97,7 @@ func resolveDependencies(cfg *Config) error {
 		}
 	}
 
-	return nil
+	return t, nil
 }
 
 func loadConfig(file string) (*Config, error) {
@@ -73,11 +106,7 @@ func loadConfig(file string) (*Config, error) {
 		return nil, err
 	}
 
-	sha1 := hasher.SHA1FromBytes(bytes)
-
 	cfg := newConfig()
-
-	cfg.SHA1 = sha1
 
 	err = yaml.Unmarshal(bytes, &cfg)
 	if err != nil {
@@ -102,11 +131,6 @@ func AcquireConfig(machine string) (*Config, error) {
 	}
 
 	cfg, err := loadConfig(file)
-	if err != nil {
-		return nil, err
-	}
-
-	err = resolveDependencies(cfg)
 	if err != nil {
 		return nil, err
 	}

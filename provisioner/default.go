@@ -1,8 +1,6 @@
 package provisioner
 
 import (
-	"fmt"
-
 	"github.com/autonomy/alterant/cache"
 	"github.com/autonomy/alterant/commander"
 	"github.com/autonomy/alterant/config"
@@ -33,7 +31,6 @@ func (p *DefaultProvisioner) executeTask(task *task.Task) error {
 	// create the links specified in the task
 	err := p.Linker.CreateLinks(task.Links)
 	if err != nil {
-		fmt.Println(err)
 		return err
 	}
 
@@ -49,7 +46,7 @@ func (p *DefaultProvisioner) executeTask(task *task.Task) error {
 }
 
 // Provision provisions a machine
-func (p *DefaultProvisioner) Provision(requests []*task.Task) error {
+func (p *DefaultProvisioner) Provision() error {
 	p.Logger.Info(0, "Provisioning: %s", p.Cfg.Machine)
 
 	// decrypt files
@@ -58,7 +55,7 @@ func (p *DefaultProvisioner) Provision(requests []*task.Task) error {
 		return err
 	}
 
-	for _, task := range requests {
+	for _, task := range p.Cfg.Tasks {
 		err = p.executeTask(task)
 		if err != nil {
 			return err
@@ -77,145 +74,63 @@ func (p *DefaultProvisioner) Provision(requests []*task.Task) error {
 	return nil
 }
 
-// TODO: execute only the components that have been changed e.g. if a command
-// has been updated but everything else is the same, then only execute that
-// command
 // Update updates a machine's tasks
-func (p *DefaultProvisioner) Update(cfg *config.Config) error {
-	// db, err := bolt.Open("/home/vagrant/.alterant/cache.db", 0600, nil)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// defer db.Close()
+func (p *DefaultProvisioner) Update() error {
+	cache, err := cache.ReadCache()
+	if err != nil {
+		return err
+	}
 
-	// db.Update(func(tx *bolt.Tx) error {
-	// 	mb := tx.Bucket([]byte(cfg.Machine))
-	// 	if mb == nil {
-	// 		fmt.Printf("Machine not found: %s\n", cfg.Machine)
-	// 	}
+	if machine, ok := cache.Machines[p.Cfg.Machine]; ok {
+		if machine.SHA1 == p.Cfg.SHA1 {
+			p.Logger.Info(1, "Machine is clean: %s", p.Cfg.Machine)
 
-	// 	for _, task := range cfg.Order {
-	// 		taskAdded := false
-	// 		taskRenamed := false
+			return nil
+		}
 
-	// 		tb := mb.Bucket([]byte("tasks"))
-	// 		if tb == nil {
-	// 			fmt.Println("Tasks not found in cache")
+		p.Logger.Info(1, "Changes detected for machine: %s", p.Cfg.Machine)
 
-	// 			return nil
-	// 		}
+		for i := len(p.Cfg.Tasks) - 1; i >= 0; i-- {
+			task := p.Cfg.Tasks[i]
+			if t, ok := machine.Tasks[task.Name]; ok {
+				if t.SHA1 == task.SHA1 {
+					p.Logger.Info(2, "Task is clean: %s", task.Name)
 
-	// 		t := tb.Bucket([]byte(task.Name))
+					p.Cfg.Tasks = append(p.Cfg.Tasks[:i], p.Cfg.Tasks[i+1:]...)
+				} else {
+					p.Logger.Info(2, "Task is dirty: %s", task.Name)
+					for _, l := range t.Links {
+						for i := len(task.Links) - 1; i >= 0; i-- {
+							if l == task.Links[i].SHA1 {
+								p.Logger.Info(2, "Link is clean: %s", l)
 
-	// 		if t == nil {
-	// 			fmt.Printf("Task not found in cache: %s\n", task.Name)
+								task.Links = append(task.Links[:i], task.Links[i+1:]...)
+							} else {
+								p.Logger.Info(2, "Link has changed: %s", l)
+							}
+						}
+					}
 
-	// 			// check if the task has been renamed
-	// 			c := tb.Cursor()
+					for _, c := range t.Commands {
+						for i := len(task.Commands) - 1; i >= 0; i-- {
+							if c == task.Commands[i].SHA1 {
+								p.Logger.Info(2, "Command is clean: %s", c)
 
-	// 			for k, v := c.First(); k != nil; k, v = c.Next() {
-	// 				t = tb.Bucket([]byte(k))
+								task.Commands = append(task.Commands[:i], task.Commands[i+1:]...)
+							} else {
+								p.Logger.Info(2, "Command has changed: %s", c)
+							}
+						}
+					}
+				}
+			} else {
+				p.Logger.Info(2, "New task detected: %s", task.Name)
+				// TODO: check for rename
+			}
+		}
+	}
 
-	// 				sha1 := t.Get([]byte("SHA1"))
-
-	// 				if task.SHA1 == string(sha1) {
-	// 					taskRenamed = true
-	// 					fmt.Printf("Task renamed: %s -> %s", k, task.Name)
-
-	// 					tb.Delete([]byte(k))
-
-	// 					err = p.cacheTask(tb, task)
-	// 					if err != nil {
-	// 						return err
-	// 					}
-
-	// 					break
-	// 				}
-
-	// 				// TODO: I don't want to have to use `v`
-	// 				fmt.Printf("value=%s", v)
-	// 			}
-
-	// 			// if the task is not a rename then it must be a new task
-	// 			if !taskRenamed {
-	// 				fmt.Printf("Adding new task: %s\n", task.Name)
-
-	// 				err = p.executeTask(task)
-	// 				if err != nil {
-	// 					return err
-	// 				}
-
-	// 				err = p.cacheTask(tb, task)
-	// 				if err != nil {
-	// 					return err
-	// 				}
-
-	// 				taskAdded = true
-	// 			}
-	// 		}
-
-	// 		// if the task is not new, then it possibly needs updating
-	// 		if !taskAdded {
-	// 			sha1 := t.Get([]byte("SHA1"))
-
-	// 			if task.SHA1 == string(sha1) {
-	// 				fmt.Printf("Task is clean: %s\n", task.Name)
-	// 				continue
-	// 			} else {
-	// 				fmt.Printf("Updating task: %s\n", task.Name)
-
-	// 				// err = tb.DeleteBucket([]byte(task.Name))
-	// 				// if err != nil {
-	// 				// 	return err
-	// 				// }
-
-	// 				lb := t.Bucket([]byte("links"))
-	// 				if lb == nil {
-	// 					fmt.Println("Links not found")
-	// 					return fmt.Errorf("Links not found")
-	// 				}
-
-	// 				var links []*link.Link
-	// 				for _, link := range task.Links {
-	// 					l := lb.Get([]byte(link.SHA1))
-	// 					if l == nil {
-	// 						fmt.Println("Link exists")
-	// 						links = append(links, link)
-	// 					}
-	// 				}
-	// 				task.Links = links
-
-	// 				cb := t.Bucket([]byte("commands"))
-	// 				if cb == nil {
-	// 					fmt.Println("Commands not found")
-	// 					return fmt.Errorf("Commands not found")
-	// 				}
-
-	// 				var commands []*command.Command
-	// 				for _, command := range task.Commands {
-	// 					c := cb.Get([]byte(command.SHA1))
-	// 					if c == nil {
-	// 						commands = append(commands, command)
-	// 					}
-	// 				}
-
-	// 				task.Commands = commands
-	// 				err = p.executeTask(task)
-	// 				if err != nil {
-	// 					return err
-	// 				}
-
-	// 				err = p.cacheTask(tb, task)
-	// 				if err != nil {
-	// 					return err
-	// 				}
-
-	// 			}
-	// 		}
-	// 	}
-
-	// 	return nil
-	// })
+	p.Provision()
 
 	return nil
 }
