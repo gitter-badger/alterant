@@ -1,5 +1,7 @@
 # Alterant
-Alterant is a lightweight provisioning tool built with ease of use, security, and flexibility in mind. Alter your machine with ease.
+Alterant is a lightweight provisioning tool built with ease of use, security, and flexibility in mind.
+
+_Alter your machine with ease_.
 
 ### Features
 * Encrypts sensitive data with OpenPGP keys
@@ -11,7 +13,7 @@ Alterant is a lightweight provisioning tool built with ease of use, security, an
 * Easy installation with zero dependencies
 
 ## Installation
-Install the latest [release](https://github.com/autonomy/alterant/releases).
+Install the latest [release](https://github.com/autonomy/alterant/releases) in your `$PATH`.
 
 ## Documentation
 For usage and examples see [Alterant](http://autonomy.github.io/alterant).
