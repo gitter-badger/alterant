@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="UTF-8">
+    <title>Alterant by autonomy</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="stylesheets/normalize.css" media="screen">
+    <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,700' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/github-light.css" media="screen">
+  </head>
+  <body>
+    <section class="page-header">
+      <h1 class="project-name">Alterant</h1>
+      <h2 class="project-tagline"></h2>
+      <a href="https://github.com/autonomy/alterant" class="btn">View on GitHub</a>
+      <a href="https://github.com/autonomy/alterant/zipball/master" class="btn">Download .zip</a>
+      <a href="https://github.com/autonomy/alterant/tarball/master" class="btn">Download .tar.gz</a>
+    </section>
+
+    <section class="main-content">
+      <h1>
+<a id="usage" class="anchor" href="#usage" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Usage</h1>
+
+<p>Alterant uses git as a backend for storage. The structure is simple, each
+<code>branch</code> within a repository is considered to be a <code>machine</code> and is orphaned.
+Within each <code>machine</code>, a YAML file named after the <code>machine</code> is used to describe
+how a <code>machine</code> is to be provisioned. To generate a new <code>machine</code>:</p>
+
+<pre><code>alterant new test_machine
+</code></pre>
+
+<p>Let's edit <code>test_machine.yaml</code> to be:</p>
+
+<div class="highlight highlight-source-yaml"><pre><span class="pl-s"><span class="pl-ent">tasks:</span></span>
+  <span class="pl-s"><span class="pl-ent">test1:</span></span>
+     <span class="pl-s"><span class="pl-ent">dependencies:</span></span>
+      <span class="pl-s">- <span class="pl-s"><span class="pl-pds">"</span>test2<span class="pl-pds">"</span></span></span>
+    <span class="pl-s"><span class="pl-ent">links:</span></span>
+      <span class="pl-s">-</span>
+        <span class="pl-s"><span class="pl-ent">target:</span> <span class="pl-s"><span class="pl-pds">"</span>test1<span class="pl-pds">"</span></span></span>
+        <span class="pl-s"><span class="pl-ent">destination:</span> <span class="pl-s"><span class="pl-pds">"</span>test1<span class="pl-pds">"</span></span></span>
+    <span class="pl-s"><span class="pl-ent">commands:</span></span>
+        <span class="pl-s">- <span class="pl-s"><span class="pl-pds">"</span>echo Test1<span class="pl-pds">"</span></span></span>
+  <span class="pl-s"><span class="pl-ent">test2:</span></span>
+    <span class="pl-s"><span class="pl-ent">dependencies:</span></span>
+      <span class="pl-s">- <span class="pl-s"><span class="pl-pds">"</span>test3<span class="pl-pds">"</span></span></span>
+    <span class="pl-s"><span class="pl-ent">links:</span></span>
+      <span class="pl-s">-</span>
+        <span class="pl-s"><span class="pl-ent">target:</span>  <span class="pl-s"><span class="pl-pds">"</span>test2<span class="pl-pds">"</span></span></span>
+        <span class="pl-s"><span class="pl-ent">destination:</span> <span class="pl-s"><span class="pl-pds">"</span>test2<span class="pl-pds">"</span></span></span>
+    <span class="pl-s"><span class="pl-ent">commands:</span></span>
+<span class="pl-s">      - |</span>
+<span class="pl-s">        #!/usr/bin/env bash</span>
+<span class="pl-s"></span>
+<span class="pl-s">        # This is a multiline command that is useful for scripts</span>
+<span class="pl-s">        echo Test2</span>
+<span class="pl-s"></span>  <span class="pl-s"><span class="pl-ent">test3:</span></span>
+    <span class="pl-s"><span class="pl-ent">links:</span></span>
+      <span class="pl-s">-</span>
+        <span class="pl-s"><span class="pl-ent">target:</span>  <span class="pl-s"><span class="pl-pds">"</span>test3<span class="pl-pds">"</span></span></span>
+        <span class="pl-s"><span class="pl-ent">destination:</span> <span class="pl-s"><span class="pl-pds">"</span>test3<span class="pl-pds">"</span></span></span>
+        <span class="pl-s"><span class="pl-ent">encrypted:</span> <span class="pl-s">true</span></span></pre></div>
+
+<p>We can see from of our <code>test_machine.yaml</code> that a <code>task</code> has three fields.</p>
+
+<ul>
+<li><code>dependencies</code></li>
+<li><code>links</code></li>
+<li><code>commands</code></li>
+</ul>
+
+<h4>
+<a id="dependencies" class="anchor" href="#dependencies" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Dependencies</h4>
+
+<p>A task can be dependent on multiple other tasks in order for it to successfully
+finish. Alterant will automatically resolve the order that a <code>machine</code> should
+be provisioned. In this case our <code>tasks</code> will be executed in the order:
+<code>test3</code> -&gt; <code>test2</code> -&gt; <code>test1</code></p>
+
+<h4>
+<a id="links" class="anchor" href="#links" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Links</h4>
+
+<p>A <code>link</code> is specified assuming that the <code>target</code> is relative to the repository
+root, and that the <code>destination</code> is relative to <code>$HOME</code>. Alterant uses OpenPGP
+for encryption of sensitive data. A file can be encrypted using the
+<code>encrypted: true</code> flag for the <code>target</code> file. To generate a key-pair used for
+encryption/decryption:</p>
+
+<pre><code>$ alterant gen-key "NAME" "COMMENT" "EMAIL"
+</code></pre>
+
+<p>The keys are generated and placed at <code>~/.alterant/{pubring.gpg,secring.gpg}</code>.
+Be sure to add the unencrypted file to your <code>.gitignore</code> (test3 in the case of
+our example).</p>
+
+<h4>
+<a id="commands" class="anchor" href="#commands" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Commands</h4>
+
+<p>A <code>command</code> can be any script/command you would run from a shell. They can be
+formatted as single line, or multiline.</p>
+
+<h3>
+<a id="provisioning" class="anchor" href="#provisioning" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Provisioning</h3>
+
+<p>With our machine ready for deployment we push the changes upstream. Alterant can
+now use the machine for provisioning:</p>
+
+<pre><code>$ alterant --verbose provision --clobber --parents https:/path/to/dotfiles.git test_machine
+</code></pre>
+
+      <footer class="site-footer">
+        <span class="site-footer-owner"><a href="https://github.com/autonomy/alterant">Alterant</a> is maintained by <a href="https://github.com/autonomy">autonomy</a>.</span>
+
+        <span class="site-footer-credits">This page was generated by <a href="https://pages.github.com">GitHub Pages</a> using the <a href="https://github.com/jasonlong/cayman-theme">Cayman theme</a> by <a href="https://twitter.com/jasonlong">Jason Long</a>.</span>
+      </footer>
+
+    </section>
+
+  
+  </body>
+</html>
