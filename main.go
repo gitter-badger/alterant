@@ -149,6 +149,11 @@ func main() {
 						log.Fatal(err)
 					}
 
+					err = repo.Pull(requestedMachine)
+					if err != nil {
+						log.Fatal(err)
+					}
+
 					cfg, err := config.AcquireConfig(requestedMachine)
 					if err != nil {
 						log.Fatal(err)
