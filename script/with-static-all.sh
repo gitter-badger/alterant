@@ -2,7 +2,7 @@
 
 set -ex
 
-INSTALL_PATH="../../install"
+INSTALL_PATH="../../../../install"
 export BUILD="$PWD/vendor/libgit2/build"
 export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$INSTALL_PATH/lib/pkgconfig:$INSTALL_PATH/lib64/pkgconfig"
 

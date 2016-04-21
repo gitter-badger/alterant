@@ -6,7 +6,7 @@
 
 -VENDORED_PATH=vendor/libgit2
 +INSTALL_PATH="$PWD/install"
-+VENDORED_PATH="$PWD/submodules/git2go/vendor/libgit2"
++VENDORED_PATH="$PWD/vendor/github.com/libgit2/git2go/vendor/libgit2"
 +export PKG_CONFIG_PATH="$INSTALL_PATH/lib/pkgconfig:$INSTALL_PATH/lib64/pkgconfig"
 
  cd $VENDORED_PATH &&

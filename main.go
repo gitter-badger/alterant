@@ -107,11 +107,66 @@ func main() {
 
 					provisioner := provisioner.NewDefaultProvisioner(cfg, c)
 
-					err = provisioner.Provision(cfg.Order)
+					err = provisioner.Provision()
 					if err != nil {
 						log.Fatal(err)
 					}
 				}
+			},
+		},
+		{
+			Name:      "update",
+			Usage:     "update a machine with any remote changes",
+			Category:  "Provisioning actions",
+			ArgsUsage: "[machines...]",
+			Flags: []cli.Flag{
+				cli.BoolTFlag{
+					Name:  "links",
+					Usage: "provision links, defaults to true",
+				},
+				cli.BoolTFlag{
+					Name:  "commands",
+					Usage: "provision commands, defaults to true",
+				},
+				cli.BoolFlag{
+					Name:  "parents",
+					Usage: "make parent directories as needed, defaults to false",
+				},
+				cli.BoolFlag{
+					Name:  "clobber",
+					Usage: "remove existing files/directories before linking, defaults to false",
+				},
+			},
+			Action: func(c *cli.Context) {
+				if len(c.Args()) == 0 {
+					cli.ShowSubcommandHelp(c)
+					os.Exit(1)
+				}
+
+				for _, requestedMachine := range c.Args() {
+					err := os.Chdir(path.Join(alterantDir, requestedMachine))
+					if err != nil {
+						log.Fatal(err)
+					}
+
+					err = repo.Pull(requestedMachine)
+					if err != nil {
+						log.Fatal(err)
+					}
+
+					cfg, err := config.AcquireConfig(requestedMachine)
+					if err != nil {
+						log.Fatal(err)
+					}
+
+					provisioner := provisioner.NewDefaultProvisioner(cfg, c)
+
+					err = provisioner.Update()
+					if err != nil {
+						log.Fatal(err)
+					}
+				}
+
 			},
 		},
 		// {
