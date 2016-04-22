@@ -58,15 +58,31 @@ func readFromFile(file string) ([]byte, error) {
 	return data, err
 }
 
-func getMaskedInput() ([]byte, error) {
-	maskedReader := mask.NewMaskedReader()
+func (de *DefaultEncryption) getPasswrod(confirm bool) ([]byte, error) {
+	if de.Password != "" {
+		return []byte(de.Password), nil
+	} else {
+		fmt.Println("Enter your password:")
 
-	key, err := maskedReader.GetInputConfirmMasked()
-	if err != nil {
-		return nil, err
+		maskedReader := mask.NewMaskedReader()
+
+		var k []byte
+		if confirm {
+			k, err := maskedReader.GetInputConfirmMasked()
+			if err != nil {
+				return nil, err
+			}
+
+			return k, nil
+		}
+
+		k, err := maskedReader.GetInputMasked()
+		if err != nil {
+			return nil, err
+		}
+
+		return k, nil
 	}
-
-	return key, nil
 }
 
 func key32BitFromPassword(password []byte) string {
@@ -86,7 +102,9 @@ func (de *DefaultEncryption) HashPassword(password string) (string, error) {
 	} else {
 		fmt.Println("Enter your password:")
 
-		k, err := getMaskedInput()
+		maskedReader := mask.NewMaskedReader()
+
+		k, err := maskedReader.GetInputConfirmMasked()
 		if err != nil {
 			return "", err
 		}
@@ -169,7 +187,7 @@ func NewKeyPair(name string, comment string, email string) error {
 	return nil
 }
 
-func signedEntity(privateKey string) (*openpgp.Entity, error) {
+func signedEntity(privateKey string, key []byte) (*openpgp.Entity, error) {
 	// open ascii armored private key
 	sign, err := os.Open(privateKey)
 	defer sign.Close()
@@ -192,6 +210,15 @@ func signedEntity(privateKey string) (*openpgp.Entity, error) {
 	signed, err := openpgp.ReadEntity(signReader)
 	if err != nil {
 		return nil, err
+	}
+
+	err = signed.PrivateKey.Decrypt(key)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, subkey := range signed.Subkeys {
+		subkey.PrivateKey.Decrypt(key)
 	}
 
 	return signed, nil
@@ -254,8 +281,10 @@ func (de *DefaultEncryption) EncryptFiles(cfg *config.Config) error {
 		return err
 	}
 
+	key, err := de.getPasswrod(false)
+
 	// obtain a private key for signing
-	signed, err := signedEntity(de.Private)
+	signed, err := signedEntity(de.Private, key)
 	if err != nil {
 		return err
 	}
@@ -340,6 +369,20 @@ func (de *DefaultEncryption) DecryptFiles(cfg *config.Config) error {
 	to, err := openpgp.ReadArmoredKeyRing(privateKeyring)
 	if err != nil {
 		return err
+	}
+
+	entity := to[0]
+
+	key, err := de.getPasswrod(false)
+
+	err = entity.PrivateKey.Decrypt(key)
+	if err != nil {
+		return err
+	}
+
+	entity.PrivateKey.Decrypt(key)
+	for _, subkey := range entity.Subkeys {
+		subkey.PrivateKey.Decrypt(key)
 	}
 
 	for _, task := range cfg.Tasks {
