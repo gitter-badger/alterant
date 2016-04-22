@@ -13,7 +13,7 @@ Alterant is a lightweight provisioning tool built with ease of use, security, an
 * Easy installation with zero dependencies
 
 ## Installation
-Install the latest [release](https://github.com/autonomy/alterant/releases) in your `$PATH`.
+Install the latest [release](https://github.com/autonomy/alterant/releases) in your `$PATH`. Releases can be verified with [Autonomy's public PGP Key](http://autonomy.github.io).
 
 ## Documentation
 For usage and examples see [Alterant](http://autonomy.github.io/alterant).
@@ -27,7 +27,7 @@ $ cd $GOPATH/src/github.com/autonomy/alterant
 $ make deps
 $ make [linux|darwin]
 ````
-Before any pull request is accepted be sure to follow the guidelines outlined in [CONTRIBUTING.md](CONTRIBUTING.md).
+Contributing guidelines can be seen in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Built With
 
@@ -38,7 +38,7 @@ Before any pull request is accepted be sure to follow the guidelines outlined in
 
 ## Authors
 
-* **[The Autonomy Team](https://github.com/orgs/autonomy/people)**
+* **[Autonomy Members](https://github.com/orgs/autonomy/people)**
 
 As well as the [contributors](https://github.com/autonomy/alterant/contributors).
 
