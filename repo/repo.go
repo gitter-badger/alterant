@@ -205,8 +205,8 @@ func CurrentMachine() (machine string, err error) {
 }
 
 // CloneToAlterantDir clones the requested machine to ~/.alterant
-func CloneToAlterantDir(url string, machine string, alterantDir string) error {
-	repoPath := path.Join(alterantDir, machine)
+func CloneToAlterantDir(url string, machine string) error {
+	repoPath := path.Join(os.Getenv("ALTERANT_HOME"), machine)
 	_, err := git.Clone(url, repoPath, &git.CloneOptions{CheckoutBranch: machine})
 	if err != nil {
 		return err

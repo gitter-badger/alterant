@@ -22,8 +22,8 @@ import (
 )
 
 var (
-	defaultPublicKeyOutput  = os.Getenv("HOME") + "/.alterant/pubring.gpg"
-	defaultPrivateKeyOutput = os.Getenv("HOME") + "/.alterant/secring.gpg"
+	defaultPrivateKeyOutput = os.Getenv("ALTERANT_HOME") + "/private.asc"
+	defaultPublicKeyOutput  = os.Getenv("ALTERANT_HOME") + "/public.asc"
 )
 
 // DefaultEncryption is a basic encryption handler and is the default

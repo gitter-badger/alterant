@@ -2,6 +2,7 @@ package cache
 
 import (
 	"io/ioutil"
+	"os"
 
 	"gopkg.in/yaml.v2"
 
@@ -60,7 +61,7 @@ func WriteToFile(cfg *config.Config) error {
 		return err
 	}
 
-	err = ioutil.WriteFile("/tmp/db.yaml", d, 0644)
+	err = ioutil.WriteFile(os.Getenv("ALTERANT_HOME")+"/db.yaml", d, 0644)
 	if err != nil {
 		return err
 	}
@@ -69,7 +70,7 @@ func WriteToFile(cfg *config.Config) error {
 }
 
 func ReadCache() (*Cache, error) {
-	bytes, err := ioutil.ReadFile("/tmp/db.yaml")
+	bytes, err := ioutil.ReadFile(os.Getenv("ALTERANT_HOME") + "/db.yaml")
 	if err != nil {
 		return nil, err
 	}
