@@ -25,10 +25,11 @@ import (
 var version string
 
 func main() {
-	alterantDir := os.Getenv("HOME") + "/.alterant"
+	alterantHome := os.Getenv("HOME") + "/.alterant"
+	os.Setenv("ALTERANT_HOME", alterantHome)
 
-	if _, err := os.Stat(alterantDir); os.IsNotExist(err) {
-		if err := os.MkdirAll(alterantDir, 0700); err != nil {
+	if _, err := os.Stat(alterantHome); os.IsNotExist(err) {
+		if err := os.MkdirAll(alterantHome, 0700); err != nil {
 			log.Fatal(err)
 		}
 	}
@@ -44,12 +45,12 @@ func main() {
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
 			Name:  "private",
-			Value: os.Getenv("HOME") + "/.alterant/secring.gpg",
+			Value: os.Getenv("ALTERANT_HOME") + "/private.asc",
 			Usage: "OpenPGP ASCII armored private key",
 		},
 		cli.StringFlag{
 			Name:  "public",
-			Value: os.Getenv("HOME") + "/.alterant/pubring.gpg",
+			Value: os.Getenv("ALTERANT_HOME") + "/public.asc",
 			Usage: "OpenPGP ASCII armored public key",
 		},
 		cli.BoolFlag{
@@ -90,12 +91,12 @@ func main() {
 
 				url := c.Args()[0]
 				for _, requestedMachine := range c.Args().Tail() {
-					err := repo.CloneToAlterantDir(url, requestedMachine, alterantDir)
+					err := repo.CloneToAlterantDir(url, requestedMachine)
 					if err != nil {
 						log.Fatal(err)
 					}
 
-					err = os.Chdir(path.Join(alterantDir, requestedMachine))
+					err = os.Chdir(path.Join(alterantHome, requestedMachine))
 					if err != nil {
 						log.Fatal(err)
 					}
@@ -144,7 +145,7 @@ func main() {
 				}
 
 				for _, requestedMachine := range c.Args() {
-					err := os.Chdir(path.Join(alterantDir, requestedMachine))
+					err := os.Chdir(path.Join(alterantHome, requestedMachine))
 					if err != nil {
 						log.Fatal(err)
 					}
