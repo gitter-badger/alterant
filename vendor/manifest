@@ -44,24 +44,6 @@
 			"notests": true
 		},
 		{
-			"importpath": "golang.org/x/crypto/openpgp/armor",
-			"repository": "https://go.googlesource.com/crypto",
-			"vcs": "git",
-			"revision": "1777f3ba8c1fed80fcaec3317e3aaa4f627764d2",
-			"branch": "master",
-			"path": "/openpgp/armor",
-			"notests": true
-		},
-		{
-			"importpath": "golang.org/x/crypto/openpgp/packet",
-			"repository": "https://go.googlesource.com/crypto",
-			"vcs": "git",
-			"revision": "1777f3ba8c1fed80fcaec3317e3aaa4f627764d2",
-			"branch": "master",
-			"path": "/openpgp/packet",
-			"notests": true
-		},
-		{
 			"importpath": "golang.org/x/crypto/ssh/terminal",
 			"repository": "https://go.googlesource.com/crypto",
 			"vcs": "git",

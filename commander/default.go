@@ -22,8 +22,12 @@ func (dc *DefaultCommander) Execute(t *task.Task) error {
 	}
 
 	for _, taskCmd := range t.Commands {
+		if !taskCmd.Queued {
+			continue
+		}
+
 		cmdName := "bash"
-		cmdArgs := []string{"-c", taskCmd}
+		cmdArgs := []string{"-c", taskCmd.Contents}
 		cmd := exec.Command(cmdName, cmdArgs...)
 
 		if dc.logger.Verbose {
@@ -32,7 +36,7 @@ func (dc *DefaultCommander) Execute(t *task.Task) error {
 			cmd.Stdin = os.Stdin
 		}
 
-		dc.logger.Info(2, "Executing command: \n%s", taskCmd)
+		dc.logger.Info(2, "Executing command: \n%s", taskCmd.Contents)
 		err := cmd.Run()
 		if err != nil {
 			return err

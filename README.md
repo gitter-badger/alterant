@@ -1,87 +1,47 @@
-
 # Alterant
+[![Build Status](https://travis-ci.org/autonomy/alterant.svg?branch=master)](https://travis-ci.org/autonomy/alterant)
 
-## Features
-* Automatic dependency resolution
-* OpenPGP encryption
-* Symlinking
-* Single and multiline commands
+Alterant is a lightweight provisioning tool built with ease of use, security, and flexibility in mind - _Alter your machine with ease_.
 
-## Example
-### Preparation
-Alterant uses git as a backend for storage. The structure is simple, each
-`branch` within a repository is considered to be a `machine` and is orphaned.
-Within each `machine`, a YAML file named after the `machine` is used to describe
-how a `machine` is to be provisioned. To generate a new `machine`:
+### Features
+* Encrypts sensitive data with OpenPGP keys
+* Allows flexible organization of configurations
+* Installs dotfiles with symlinks
+* Executes scripts defined within the YAML
+* Automatically resolves dependecies
+* Intelligently performs updates
+* Easy installation with zero dependencies
+
+## Installation
+Install the latest [release](https://github.com/autonomy/alterant/releases) in your `$PATH`.
+
+## Documentation
+For usage and examples see [Alterant](http://autonomy.github.io/alterant).
+
+## Hacking
+Compiling from source:
+````bash
+$ go get -d github.com/autonomy/alterant
+$ go get -u github.com/FiloSottile/gvt
+$ cd $GOPATH/src/github.com/autonomy/alterant
+$ make deps
+$ make [linux|darwin]
 ````
-alterant new test_machine
-````
+Before any pull request is accepted be sure to follow the guidelines outlined in [CONTRIBUTING.md](CONTRIBUTING.md).
 
-Let's edit `test_machine.yaml` to be:
-````yaml
-tasks:
-  test1:
-     dependencies:
-      - "test2"
-    links:
-      -
-        target: "test1"
-        destination: "test1"
-    commands:
-        - "echo Test1"
-  test2:
-    dependencies:
-      - "test3"
-    links:
-      -
-        target:  "test2"
-        destination: "test2"
-    commands:
-      - |
-        #!/usr/bin/env bash
+## Built With
 
-        # This is a multiline command that is useful for scripts
-        echo Test2
-  test3:
-    links:
-      -
-        target:  "test3"
-        destination: "test3"
-        encrypted: true
-````
-We can see from of our `test_machine.yaml` that a `task` has three fields.
-* `dependencies`
-* `links`
-* `commands`
+* Go
+* Git2Go - libgit2 bindings
+* OpenPGP - Golang implementation
+* OpenSSL
 
-#### Dependencies
-A task can be dependent on multiple other tasks in order for it to successfully
-finish. Alterant will automatically resolve the order that a `machine` should
-be provisioned. In this case our `tasks` will be executed in the order:
-`test3` -> `test2` -> `test1`
+## Authors
 
-#### Links
-A `link` is specified assuming that the `target` is relative to the repository
-root, and that the `destination` is relative to `$HOME`. Alterant uses OpenPGP
-for encryption of sensitive data. A file can be encrypted using the
-`encrypted: true` flag for the `target` file. To generate a key-pair used for
-encryption/decryption:
-````
-$ alterant gen-key "NAME" "COMMENT" "EMAIL"
-````
+* **[The Autonomy Team](https://github.com/orgs/autonomy/people)**
 
-The keys are generated and placed at `~/.alterant/{pubring.gpg,secring.gpg}`.
-Be sure to add the unencrypted file to your `.gitignore` (test3 in the case of
-our example).
+As well as the [contributors](https://github.com/autonomy/alterant/contributors).
 
-#### Commands
-A `command` can be any script/command you would run from a shell. They can be
-formatted as single line, or multiline.
+## License
 
-### Provisioning
-With our machine ready for deployment we push the changes upstream. Alterant can
-now use the machine for provisioning:
-````
-$ alterant --verbose provision --clobber --parents https:/path/to/dotfiles.git test_machine
-````
-
+This project is licensed under the Apache License 2.0 - see [LICENSE.md](LICENSE.md) for details.

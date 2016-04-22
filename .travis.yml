@@ -1,0 +1,20 @@
+language: go
+sudo: false
+os:
+  - linux
+  - osx
+go:
+  - 1.6
+  - tip
+install:
+    # LINUX
+    - if [ "$TRAVIS_OS_NAME" == "linux" ]; then export TARGET="linux"; fi
+    # OSX
+    - if [ "$TRAVIS_OS_NAME" == "osx" ]; then export TARGET="darwin"; fi
+    - if [ "$TRAVIS_OS_NAME" == "osx" ]; then brew update && brew tap homebrew/dupes && brew install zlib; fi
+    - go get -u github.com/FiloSottile/gvt
+    - cd $GOPATH/src/github.com/autonomy/alterant
+    - make deps
+script:
+    - echo "Building for $TARGET"
+    - make $TARGET
