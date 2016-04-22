@@ -1,20 +1,27 @@
 language: go
 sudo: false
 os:
-  - linux
-  - osx
+- linux
+- osx
 go:
-  - 1.6
-  - tip
+- 1.6
+- tip
 install:
-    # LINUX
-    - if [ "$TRAVIS_OS_NAME" == "linux" ]; then export TARGET="linux"; fi
-    # OSX
-    - if [ "$TRAVIS_OS_NAME" == "osx" ]; then export TARGET="darwin"; fi
-    - if [ "$TRAVIS_OS_NAME" == "osx" ]; then brew update && brew tap homebrew/dupes && brew install zlib; fi
-    - go get -u github.com/FiloSottile/gvt
-    - cd $GOPATH/src/github.com/autonomy/alterant
-    - make deps
+# LINUX
+- if [ "$TRAVIS_OS_NAME" == "linux" ]; then export TARGET="linux"; fi
+# OSX
+- if [ "$TRAVIS_OS_NAME" == "osx" ]; then export TARGET="darwin"; fi
+- if [ "$TRAVIS_OS_NAME" == "osx" ]; then brew update && brew tap homebrew/dupes && brew install zlib; fi
+- go get -u github.com/FiloSottile/gvt
+- cd $GOPATH/src/github.com/autonomy/alterant
+- make deps
 script:
-    - echo "Building for $TARGET"
-    - make $TARGET
+- echo "Building for $TARGET"
+- make $TARGET
+deploy:
+  provider: releases
+  api_key:
+    secure: UZGjqodsk6masGkvNDD13XhslShX7PFfm2rrQPwVttOGdX/h5Rz9maRWMxMM9npGfSEQnJi9QvjNh4wUD78X/YTmDCXOZvzDrBdwVmfhQHZ/ZrVKlLdxV17YHa0f9pPC/9j6Rh/xCW+BE1p+CVNntJ3lKTzGNjsvS0jWEz4AM/ATjEDXTKzSL0pms0damEcigYBRqgr66JAGgEHzx4PdNY7Xg48/U1W7ihZjS0E7yJ5ColoGyo6JOGalYE6ejmrojbXmGAtXs3sWDhWPH3IdrvzKouXAohjjl3F+XOlTDRlgsmRUjrJXZD3Xpb8G0P+5QgST1+8GWDt/SVsx8zedDDscdbguvJGTbHNCtOwrh8DwUSV8iCRLICKHYSGRhCnmCp4SYn9StOC4tosxmtgf3nONZakefmN6ch5rgmLe7IIQOfXUz2vu2e3cnkoPnu83qxPHstb3zTqaWNgp7w6//9sU64AmWB5HeQjxQ2ZILMZxJQQVi1r/b22EGONnsPNvxxndn+DLSArkJz9WZLZ6PZuCK9Z0ba1bWUYOOsDD3RTnGJES2sNO4uHHOJftovmPnIcXgUPaKEKQduWVtJz65M0ADDylKV3y3aiD0TTiM29u+Tz/DO3W4hR9D701z98LCVqQC96CjrlrbX4Su/wJswyyD8fQmTqnqtv+geJoML4=
+  file: build/$TARGET-amd64/alterant
+  on:
+    tags: true
