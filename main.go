@@ -44,6 +44,11 @@ func main() {
 
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
+			Name:  "password",
+			Value: "",
+			Usage: "Password to decrypt the OpenPGP ASCII armored private key",
+		},
+		cli.StringFlag{
 			Name:  "private",
 			Value: os.Getenv("ALTERANT_HOME") + "/private.asc",
 			Usage: "OpenPGP ASCII armored private key",
