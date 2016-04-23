@@ -27,6 +27,13 @@ $ cd $GOPATH/src/github.com/autonomy/alterant
 $ make deps
 $ make [linux|darwin]
 ````
+
+Pull Requests:
+````bash
+git remote add fork https://$FORK_URL
+git push fork
+````
+
 Contributing guidelines can be seen in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Built With
