@@ -1,4 +1,6 @@
 # Alterant
+
+[![Join the chat at https://gitter.im/autonomy/alterant](https://badges.gitter.im/autonomy/alterant.svg)](https://gitter.im/autonomy/alterant?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![Build Status](https://travis-ci.org/autonomy/alterant.svg?branch=master)](https://travis-ci.org/autonomy/alterant)
 
 Alterant is a lightweight provisioning tool built with ease of use, security, and flexibility in mind - _Alter your machine with ease_.
